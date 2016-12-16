@@ -7,6 +7,10 @@ import numpy as np
 from utils import Timer
 
 def get_row(id):
+    """Derived from Hadoop Teragen
+
+        See: https://github.com/facebookarchive/hadoop-20/blob/master/src/examples/org/apache/hadoop/examples/terasort/TeraGen.java
+    """
     parts = []
     parts.append(''.join([chr(x) for x in np.random.randint(32,95, size=10)]))
     parts.append('{:012x}'.format(id))
@@ -46,8 +50,8 @@ if __name__ == '__main__':
         print "Usage: teragen.py num_workers num_records num_splits file_prefix"
         sys.exit(1)
     num_workers = int(sys.argv[1])
-    num_records = int(sys.argv[2])
-    num_splits = int(sys.argv[3])
+    num_splits = int(sys.argv[2])
+    num_records = int(sys.argv[3])
     file_prefix = sys.argv[4]
     ray.init(start_ray_local=True, num_workers=num_workers)
     end_index = 0
