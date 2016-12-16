@@ -1,8 +1,9 @@
 import time
 
 def chunks(l, n):
-    for i in xrange(0, len(l), n):
-        yield l[i:i + n]
+    chunk_size = (len(l) - 1) / n + 1
+    for i in xrange(0, len(l), chunk_size):
+        yield l[i:i + chunk_size]
 
 class Timer(object):
     def __init__(self, name, ct=None):
