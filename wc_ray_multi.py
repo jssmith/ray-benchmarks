@@ -2,7 +2,7 @@ import sys
 import re
 
 import ray
-import wc
+import wc as wclib
 
 from collections import defaultdict
 
@@ -11,7 +11,7 @@ def usage():
 
 @ray.remote
 def wc(input_file):
-    return wc.wc(input_file)
+    return wclib.wc(input_file)
 
 @ray.remote
 def tree_reduce(fn, data):
