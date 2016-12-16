@@ -1,27 +1,23 @@
 import sys
-#import ray
+import ray
 import random
 
 from utils import Timer, chunks
 
 def usage():
-    print "Usage: raysort num_workers num_splits inputfile [inputfile ...]"
+    print "Usage: sort_ray num_workers num_splits inputfile [inputfile ...]"
 
-# @ray.remote
-# def gen_text(start_id, num_keys, seed):
-#     np.random.seed(23435)
-#     return [teragen.get_row(i) for i in range(start_id, start_id + num_keys)]
 def read_input(input_file):
     with open(input_file) as f:
         return map(lambda x: x.rstrip(), f.readlines())
 
-#@ray.remote
+@ray.remote
 def load_files(input_files):
     res = [line for input_file in input_files for line in read_input(input_file)]
     print 'loaded {} : {}'.format(str(input_files), len(res))
     return res
 
-#@ray.remote
+@ray.remote
 def sample_input(input, num_samples, random_seed):
     random.seed(random_seed)
     res = []
@@ -29,6 +25,7 @@ def sample_input(input, num_samples, random_seed):
         res.append(input[random.randint(0, len(input) - 1)])
     return res
 
+@ray.remote
 def sort_split(input, split_points):
     si = sorted(input)
     last_split_point = 0
@@ -49,6 +46,7 @@ def sort_split(input, split_points):
 def transpose(listoflists):
     return map(list, zip(*listoflists))
 
+@ray.remote
 def merge_sorted(input_splits):
     # print "merge {} splits".format(len(input_splits))
     # for res in input_splits:
@@ -60,19 +58,19 @@ def merge_sorted(input_splits):
     return res
 
 def benchmark_sort(num_workers, num_splits, input_files):
+    ray.init(start_ray_local=True, num_workers=num_workers)
     t = Timer("sort")
     file_chunks = chunks(input_files, num_splits)
     # print "file chunks", list(file_chunks)
     # assume uniform file sizes
-    inputs = [load_files(chunk_files) for chunk_files in chunks(input_files, num_splits)]
+    inputs = [load_files.remote(chunk_files) for chunk_files in chunks(input_files, num_splits)]
 
     # sample each input
-    samples = map(lambda (input, index): sample_input(input, 10, index), zip(inputs, range(len(inputs))))
+    samples = map(lambda (input, index): sample_input.remote(input, 10, index), zip(inputs, range(len(inputs))))
 
     # flatten samples
-    samples_sorted = sorted([sample for chunk_samples in samples for sample in chunk_samples])
-    # print samples_sorted
-
+    samples_sorted = sorted([sample for chunk_samples in samples for sample in ray.get(chunk_samples)])
+    # compute sample splits
     num_samples = len(samples_sorted)
     samples_per_split = float(num_samples) / num_splits
     split_points = []
@@ -82,9 +80,10 @@ def benchmark_sort(num_workers, num_splits, input_files):
         print "split point at '{}...'".format(split_points[-1][:10])
         split_point += samples_per_split
 
-    ss = [sort_split(input, split_points) for input in inputs]
-    res = map(merge_sorted, transpose(ss))
+    ss = [sort_split.remote(input, split_points) for input in inputs]
+    res = map(merge_sorted.remote, transpose([ray.get(s) for s in ss]))
     # TODO be sure to get
+    [ray.get(r) for r in res]
     t.finish()
 
 

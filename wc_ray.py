@@ -9,7 +9,7 @@ from collections import defaultdict
 from utils import Timer, chunks
 
 def usage():
-    print "Usage: wc num_workers num_splits inputfile [inputfile ...]"
+    print "Usage: wc_ray num_workers num_splits inputfile [inputfile ...]"
 
 @ray.remote
 def wc(input_files):
