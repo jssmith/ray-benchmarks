@@ -6,12 +6,14 @@ import wc as wclib
 
 from collections import defaultdict
 
+from utils import Timer, chunks
+
 def usage():
-    print "Usage: wc inputfile [inputfile ...]"
+    print "Usage: wc num_workers num_splits inputfile [inputfile ...]"
 
 @ray.remote
-def wc(input_file):
-    return wclib.wc(input_file)
+def wc(input_files):
+    return wclib.wc(input_files)
 
 @ray.remote
 def tree_reduce(fn, data):
@@ -59,18 +61,16 @@ def dict_merge(x, y):
         res[key] = key_sum
     return res
 
-def do_wc(input_files):
+def do_wc(num_workers, num_splits, input_files):
     ray.register_class(type(dict_merge.remote), pickle=True)
-    num_workers = min(4, len(input_files))
     print "starting Ray with {} workers".format(num_workers)
     ray.init(start_ray_local=True, num_workers=num_workers)
-    results = [wc.remote(input_file) for input_file in input_files]
+    t = Timer("multi")
+    results = [wc.remote(input_file) for input_file in chunks(input_files, num_splits)]
     print "number of results is {}".format(len(results))
-    print results
-    res = reduce(dict_merge.remote, results)
-    #res = tree_reduce_remote.remote(dict_merge, results)
+    #res = reduce(dict_merge.remote, results)
+    res = tree_reduce_remote.remote(dict_merge, results)
 
-    # print ray.get(res)
     # find most common word
     most_popular_word = None
     most_popular_ct = 0
@@ -79,11 +79,13 @@ def do_wc(input_files):
             most_popular_word = word
             most_popular_ct = ct
     print "most popular word is '{}' with count {}".format(most_popular_word, most_popular_ct)
-    
+    t.finish()
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 4:
         usage()
         sys.exit(1)
-    input_files = sys.argv[1:]
-    do_wc(input_files)
+    num_workers = int(sys.argv[1])
+    num_splits = int(sys.argv[2])
+    input_files = sys.argv[3:]
+    do_wc(num_workers, num_splits, input_files)
