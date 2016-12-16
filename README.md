@@ -10,7 +10,7 @@ Parameters are as follows:
 ```
 (NUM_WORKERS=6
 NUM_SPLITS=6
-python wc_ray.py 4 2 wc_test*)
+python wc_ray.py $NUM_WORKERS $NUM_SPLITS /etc/*.conf)
 ```
 
 ## Sorting
