@@ -16,7 +16,7 @@ def load_files(input_files):
 
 
 def benchmark_sort(input_files):
-    t = Timer("BENCHMARK_SIMPLE_SORT")
+    t = Timer("RAY_BENCHMARK_SIMPLE_SORT")
     lines = load_files(input_files)
     ls = sorted(lines)
     t.finish()
