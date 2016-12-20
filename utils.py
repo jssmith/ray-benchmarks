@@ -5,6 +5,9 @@ def chunks(l, n):
     for i in xrange(0, len(l), chunk_size):
         yield l[i:i + chunk_size]
 
+def transpose(listoflists):
+    return map(list, zip(*listoflists))
+
 class Timer(object):
     def __init__(self, name, ct=None):
         self._name = name

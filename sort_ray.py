@@ -2,7 +2,7 @@ import sys
 import ray
 import random
 
-from utils import Timer, chunks
+from utils import Timer, chunks, transpose
 
 def usage():
     print "Usage: sort_ray num_workers num_splits inputfile [inputfile ...]"
@@ -48,9 +48,6 @@ def sort_split(input, split_points):
     t.finish()
     return split_results
 
-def transpose(listoflists):
-    return map(list, zip(*listoflists))
-
 @ray.remote
 def merge_sorted(input_splits):
     t = Timer('merge')
@@ -58,7 +55,7 @@ def merge_sorted(input_splits):
     # for res in input_splits:
     #     print "split from '{}' to '{}'".format(res[0][:10], res[-1][:10])
 
-    # todo merge sort
+    # todo merge sort since inputs already sorted
     res = sorted([line for split in input_splits for line in split])
     # print "have range '{}'' to '{}'".format(res[0][:10], res[-1][:10])
     t.finish()
