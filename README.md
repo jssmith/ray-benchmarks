@@ -47,3 +47,19 @@ Parameters are as follows:
 NUM_SPLITS=6
 python sort_ray.py $NUM_WORKERS $NUM_SPLITS sort_test*)
 ```
+
+## Key-Value Store
+
+The Key-Value Store benchmark runs on the same input data as the Sorting benchmark.
+
+Parameters are as follows:
+
+- `num workers` - how many worker processes Ray is to launch. This should be at least two times `num splits`, otherwise the benchmark will hang.
+- `num splits` - how much parallelism there will be in the task graph. This will set the number of tasks used to load inputs and the number tasks used to execute parallel queries against the key-value store.
+- `input files` - list of files containing data to index.
+
+```
+(NUM_WORKERS=12
+NUM_SPLITS=6
+python kvs_ray.py $NUM_WORKERS $NUM_SPLITS sort_test*)
+```
