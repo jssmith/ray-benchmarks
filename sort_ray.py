@@ -13,20 +13,25 @@ def read_input(input_file):
 
 @ray.remote
 def load_files(input_files):
+    t = Timer('load ' + ', '.join(input_files))
     res = [line for input_file in input_files for line in read_input(input_file)]
     print 'loaded {} : {}'.format(str(input_files), len(res))
+    t.finish()
     return res
 
 @ray.remote
 def sample_input(input, num_samples, random_seed):
+    t = Timer('sample')
     random.seed(random_seed)
     res = []
     for _ in range(num_samples):
         res.append(input[random.randint(0, len(input) - 1)])
+    t.finish()
     return res
 
 @ray.remote
 def sort_split(input, split_points):
+    t = Timer('sort_split')
     si = sorted(input)
     last_split_point = 0
     split_results = []
@@ -40,7 +45,7 @@ def sort_split(input, split_points):
 
     # for res in split_results:
     #     print "split from '{}' to '{}'".format(res[0][:10], res[-1][:10])
-
+    t.finish()
     return split_results
 
 def transpose(listoflists):
@@ -48,6 +53,7 @@ def transpose(listoflists):
 
 @ray.remote
 def merge_sorted(input_splits):
+    t = Timer('merge')
     # print "merge {} splits".format(len(input_splits))
     # for res in input_splits:
     #     print "split from '{}' to '{}'".format(res[0][:10], res[-1][:10])
@@ -55,11 +61,12 @@ def merge_sorted(input_splits):
     # todo merge sort
     res = sorted([line for split in input_splits for line in split])
     # print "have range '{}'' to '{}'".format(res[0][:10], res[-1][:10])
+    t.finish()
     return res
 
 def benchmark_sort(num_workers, num_splits, input_files):
     ray.init(start_ray_local=True, num_workers=num_workers)
-    t = Timer("sort")
+    t = Timer("RAY_BENCHMARK_SORT")
     file_chunks = chunks(input_files, num_splits)
     # print "file chunks", list(file_chunks)
     # assume uniform file sizes
