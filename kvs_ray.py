@@ -1,15 +1,14 @@
-#import ray
+import ray
 import sys
-from utils import transpose
 import hashlib
+import random
 
 from collections import defaultdict
-
 from random import shuffle
-
-from utils import Timer
+from utils import Timer, chunks, transpose
 
 key_len = 10
+queries_per_split = 100
 
 def usage():
     print "Usage: kvs_ray num_workers num_splits inputfile [inputfile ...]"
@@ -18,13 +17,13 @@ def read_input(input_file):
     with open(input_file) as f:
         return map(lambda x: x.rstrip(), f.readlines())
 
-#@ray.remote
+@ray.remote
 def load_files(input_files):
     res = [line for input_file in input_files for line in read_input(input_file)]
     print 'loaded {} : {}'.format(str(input_files), len(res))
     return res
 
-#@ray.remote
+@ray.remote
 def hash_split(input, num_splits):
     print "split input of length", len(input)
     splits = defaultdict(list)
@@ -46,48 +45,54 @@ def dict_merge(x, y):
         res[key] = key_sum
     return res
 
-#@ray.remote
+@ray.remote
 def merge_hashed(input_splits):
-    # for i in input_splits:
-    #     print len(i)
     res = dict([(line[:key_len], line) for input in input_splits for line in input])
     print "have dict of size", len(res)
     return res
 
+
+@ray.remote
+def _lookup(key, kvs_block):
+    return kvs_block[key]
+
 def lookup(key, kvs_blocks):
     hash_value = hash(key)
     num_splits = len(kvs_blocks)
-    return kvs_blocks[hash_value % num_splits][key]
+    return _lookup.remote(key, kvs_blocks[hash_value % num_splits])
 
-def setup(input_files):
+@ray.remote
+def query(input_files, kvs_blocks):
+    query_keys = [line[:key_len] for input_file in input_files for line in read_input(input_file)]
+    random.seed(hash(input_files[0]))
+    shuffle(query_keys)
+    query_keys = query_keys[:queries_per_split]
+    ct = 0
+    sumlen = 0
+    for key in query_keys:
+        sumlen += len(ray.get(lookup(key, kvs_blocks)))
+        ct += 1
+    print "lookup count is", ct
+    print "total length is", sumlen
+    return (ct, sumlen)
+
+def benchmark_kvs(num_workers, num_splits, input_files):
+    ray.init(start_ray_local=True, num_workers=num_workers)
     t_load = Timer('load')
-    inputs = load_files(input_files)
-    print 'number of splits is', num_splits
-    hs = [hash_split(inputs, num_splits)]
-    print 'ns', len(hs[0])
-    res = map(merge_hashed, transpose([s for s in hs]))
+    inputs = [load_files.remote(chunk_files) for chunk_files in chunks(input_files, num_splits)]
+
+    hs = [hash_split.remote(input, num_splits) for input in inputs]
+    res = map(merge_hashed.remote, transpose([ray.get(s) for s in hs]))
 
     # finish setting up kvs
-    #kvs_blocks = [ray.get(r) for r in res]
+    [ray.get(r) for r in res]
     kvs_blocks = [r for r in res]
     t_load.finish()
 
-    # query the kvs
-    query_keys = [line[:key_len] for line in read_input(input_files[0])]
-    shuffle(query_keys)
-    t_lookup = Timer('lookup')
-    ct = 0
-    for key in query_keys:
-        lookup(key, kvs_blocks)
-        ct += 1
-    print "lookup count is", ct
-    t_lookup.finish()
-
-
-# def read_keys():
-
-def benchmark_kvs(num_workers, num_splits, input_files):
-    blocks = setup(input_files)
+    t_query = Timer('RAY_BENCHMARK_KVS')
+    queries = [query.remote(chunk_files, kvs_blocks) for chunk_files in chunks(input_files, num_splits)]
+    [ray.get(q) for q in queries]
+    t_query.finish()
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
