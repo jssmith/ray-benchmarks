@@ -54,7 +54,10 @@ def merge_hashed(input_splits):
 
 @ray.remote
 def _lookup(key, kvs_block):
-    return kvs_block[key]
+    # t = Timer('lookup')
+    ret = kvs_block[key]
+    # t.finish()
+    return ret
 
 def lookup(key, kvs_blocks):
     hash_value = hash(key)
@@ -63,21 +66,24 @@ def lookup(key, kvs_blocks):
 
 @ray.remote
 def query(input_files, kvs_blocks):
+    t = Timer('query')
     query_keys = [line[:key_len] for input_file in input_files for line in read_input(input_file)]
     random.seed(hash(input_files[0]))
     shuffle(query_keys)
     query_keys = query_keys[:queries_per_split]
     ct = 0
     sumlen = 0
+    t_loop = Timer('query-loop')
     for key in query_keys:
         sumlen += len(ray.get(lookup(key, kvs_blocks)))
         ct += 1
+    t_loop.finish(queries_per_split)
     print "lookup count is", ct
     print "total length is", sumlen
+    t.finish()
     return (ct, sumlen)
 
-def benchmark_kvs(num_workers, num_splits, input_files):
-    ray.init(start_ray_local=True, num_workers=num_workers)
+def benchmark_kvs(num_splits, input_files):
     t_load = Timer('load')
     inputs = [load_files.remote(chunk_files) for chunk_files in chunks(input_files, num_splits)]
 
@@ -100,5 +106,9 @@ if __name__ == '__main__':
         sys.exit(1)
     num_workers = int(sys.argv[1])
     num_splits = int(sys.argv[2])
+    if num_workers < 2 * num_splits:
+        print 'require num_workers >= 2* num_splits'
+        sys.exit(1)
     input_files = sys.argv[3:]
-    benchmark_kvs(num_workers, num_splits, input_files)
+    ray.init(start_ray_local=True, num_workers=num_workers)
+    benchmark_kvs(num_splits, input_files)

@@ -17,8 +17,15 @@ def load_files(input_files):
 
 def benchmark_sort(input_files):
     t = Timer("RAY_BENCHMARK_SERIALSORT")
+
+    t_load = Timer("load")
     lines = load_files(input_files)
+    t_load.finish(len(lines))
+
+    t_sort = Timer("sort")
     ls = sorted(lines)
+    t_sort.finish()
+
     t.finish()
 
 
@@ -28,4 +35,5 @@ if __name__ == '__main__':
         usage()
         sys.exit(1)
     input_files = sys.argv[1:]
-    benchmark_sort(input_files)
+    for _ in range(5):
+        benchmark_sort(input_files)

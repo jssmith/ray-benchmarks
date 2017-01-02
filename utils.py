@@ -1,3 +1,4 @@
+import os
 import time
 
 def chunks(l, n):
@@ -9,15 +10,18 @@ def transpose(listoflists):
     return map(list, zip(*listoflists))
 
 class Timer(object):
-    def __init__(self, name, ct=None):
+    def __init__(self, name):
         self._name = name
         self._start_time = time.time()
-        self._ct = ct
+        self._pid = os.getpid()
+        print 'TM:{}:STRT:{:.6f} - {}'.format(self._pid, self._start_time, self._name)
 
-    def finish(self):
-        elapsed_time = time.time() - self._start_time
-        if self._ct is not None:
-            rate_str = " - {} per sec".format(self._ct / elapsed_time)
+    def finish(self, ct=None):
+        end_time = time.time()
+        elapsed_time = end_time - self._start_time
+        print 'TM:{}:FNSH:{:.6f} - {}'.format(self._pid, end_time, self._name)
+        if ct is not None:
+            rate_str = " - {} per sec".format(ct / elapsed_time)
         else:
             rate_str = ""
         print '{}: {:.6f}{}'.format(self._name, elapsed_time, rate_str)

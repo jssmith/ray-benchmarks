@@ -16,7 +16,7 @@ def load_files(input_files):
     t = Timer('load ' + ', '.join(input_files))
     res = [line for input_file in input_files for line in read_input(input_file)]
     print 'loaded {} : {}'.format(str(input_files), len(res))
-    t.finish()
+    t.finish(len(res))
     return res
 
 @ray.remote
@@ -61,8 +61,7 @@ def merge_sorted(input_splits):
     t.finish()
     return res
 
-def benchmark_sort(num_workers, num_splits, input_files):
-    ray.init(start_ray_local=True, num_workers=num_workers)
+def benchmark_sort(num_splits, input_files):
     t = Timer("RAY_BENCHMARK_SORT")
     file_chunks = chunks(input_files, num_splits)
     # print "file chunks", list(file_chunks)
@@ -99,4 +98,6 @@ if __name__ == '__main__':
     num_workers = int(sys.argv[1])
     num_splits = int(sys.argv[2])
     input_files = sys.argv[3:]
-    benchmark_sort(num_workers, num_splits, input_files)
+    ray.init(start_ray_local=True, num_workers=num_workers)
+    for _ in range(1):
+        benchmark_sort(num_splits, input_files)
