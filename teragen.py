@@ -40,25 +40,39 @@ def test_gen():
 def tera_gen(filename, start_index, end_index):
     print "generating {} records to {}".format(end_index - start_index, filename)
     np.random.seed((start_index * 71741 + end_index) % 4294967296)
-    with open(filename, 'w') as f:
+    if filename.endswith('.npy'):
+        data = np.empty(end_index - start_index, '|S100')
         for i in range(start_index, end_index):
-            f.write(get_row(i))
-            f.write('\n')
+            data[i - start_index] = get_row(i)
+        np.save(filename + '.npy', data, allow_pickle=False)
+    else:
+        with open(filename, 'w') as f:
+            for i in range(start_index, end_index):
+                f.write(get_row(i))
+                f.write('\n')
 
 if __name__ == '__main__':
-    if len(sys.argv) != 5:
-        print "Usage: teragen.py num_workers num_records num_splits file_prefix"
+    if len(sys.argv) != 6:
+        print "Usage: teragen.py num_workers num_records num_splits file_prefix file_format"
         sys.exit(1)
     num_workers = int(sys.argv[1])
     num_splits = int(sys.argv[2])
     num_records = int(sys.argv[3])
     file_prefix = sys.argv[4]
+    file_format = sys.argv[5]
+    if file_format == 'text':
+        filename_format_str = "{}_{:03d}"
+    elif file_format == 'numpy':
+        filename_format_str = "{}_{:03d}.npy"
+    else:
+        print "File format must be either 'text' or 'numpy'"
+        sys.exit(1)
     ray.init(start_ray_local=True, num_workers=num_workers)
     end_index = 0
     index_delta = float(num_records) / num_splits
     jobs = []
     for i in range(num_splits):
-        filename = "{}_{:03d}".format(file_prefix, i)
+        filename = filename_format_str.format(file_prefix, i)
         start_index = end_index
         if i < num_splits - 1:
             end_index = start_index + index_delta
