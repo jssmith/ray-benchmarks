@@ -44,7 +44,7 @@ def tera_gen(filename, start_index, end_index):
         data = np.empty(end_index - start_index, '|S100')
         for i in range(start_index, end_index):
             data[i - start_index] = get_row(i)
-        np.save(filename + '.npy', data, allow_pickle=False)
+        np.save(filename, data, allow_pickle=False)
     else:
         with open(filename, 'w') as f:
             for i in range(start_index, end_index):
