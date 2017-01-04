@@ -75,6 +75,7 @@ def benchmark_sort(num_splits, input_files):
     ss = [sort_split.remote(input, split_points) for input in inputs]
     res = map(merge_sorted.remote, transpose([ray.get(s) for s in ss]))
     # TODO be sure to get
+    [ray.get(r) for r in res]
     t.finish()
 
 
