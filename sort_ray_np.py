@@ -88,5 +88,5 @@ if __name__ == '__main__':
     num_splits = int(sys.argv[2])
     input_files = sys.argv[3:]
     ray.init(start_ray_local=True, num_workers=num_workers)
-    # for _ in range(4):
-    benchmark_sort(num_splits, input_files)
+    for _ in range(3):
+        benchmark_sort(num_splits, input_files)

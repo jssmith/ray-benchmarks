@@ -41,5 +41,5 @@ if __name__ == '__main__':
         usage()
         sys.exit(1)
     input_files = sys.argv[1:]
-    for _ in range(1):
+    for _ in range(3):
         benchmark_sort(input_files)

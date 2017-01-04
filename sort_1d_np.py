@@ -79,5 +79,5 @@ if __name__ == '__main__':
         sys.exit(1)
     num_splits = int(sys.argv[1])
     input_files = sys.argv[2:]
-    # for _ in range(4):
-    benchmark_sort(num_splits, input_files)
+    for _ in range(3):
+        benchmark_sort(num_splits, input_files)
