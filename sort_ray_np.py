@@ -35,9 +35,9 @@ def sort_split(input, split_points):
     split_results = []
     for split_point in split_points:
         next_split_point = next(i for i in xrange(last_split_point, len(si)) if si[i] > split_point)
-        split_results.append(si[last_split_point:next_split_point])
+        split_results.append(ray.put(si[last_split_point:next_split_point]))
         last_split_point = next_split_point
-    split_results.append(si[last_split_point:])
+    split_results.append(ray.put(si[last_split_point:]))
     t.finish()
     return split_results
 
@@ -45,7 +45,7 @@ def sort_split(input, split_points):
 def merge_sorted(input_splits):
     t = Timer('merge')
     # todo - maybe merge sort since inputs already sorted
-    res = np.sort(np.concatenate(input_splits))
+    res = np.sort(np.concatenate([ray.get(input) for input in input_splits]))
     t.finish()
     return res
 
