@@ -38,9 +38,9 @@ def sort_split(input, split_points):
     for split_point in split_points:
         next_split_point = next(i for i in xrange(last_split_point, len(si)) if si[i] > split_point)
         # print "next split point at {} on total length {}".format(next_split_point, len(si))
-        split_results.append(si[last_split_point:next_split_point])
+        split_results.append(ray.put(si[last_split_point:next_split_point]))
         last_split_point = next_split_point
-    split_results.append(si[last_split_point:])
+    split_results.append(ray.put(si[last_split_point:]))
     # print "number of split points is {}".format(len(split_points))
 
     # for res in split_results:
@@ -56,7 +56,7 @@ def merge_sorted(input_splits):
     #     print "split from '{}' to '{}'".format(res[0][:10], res[-1][:10])
 
     # todo merge sort since inputs already sorted
-    res = sorted([line for split in input_splits for line in split])
+    res = sorted([line for split in input_splits for line in ray.get(split)])
     # print "have range '{}'' to '{}'".format(res[0][:10], res[-1][:10])
     t.finish()
     return res
