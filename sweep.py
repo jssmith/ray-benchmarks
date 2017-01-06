@@ -56,7 +56,7 @@ if __name__ == '__main__':
         print "File format must be either 'text' or 'numpy'"
         sys.exit(1)
     partition_size = 1000000
-    for n in range(start, end, step):
+    for n in range(start, end + 1, step):
         num_records = n * partition_size
         times = run_ray_benchmark('sort_ray_np.py', n, n, input_prefix, filename_format_str)
         print '{} {}'.format(n, str(times))
