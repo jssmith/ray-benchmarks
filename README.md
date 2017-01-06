@@ -2,6 +2,19 @@
 
 ## Word Count
 
+### Generate data files:
+
+We generate synthetic data for the word count benchmark by using a reference file (King Lear)
+
+```
+(NUM_WORKERS=4
+NUM_WORDS=500000
+NUM_SPLITS=5
+FILE_PREFIX=wc_test
+python wcgen.py $NUM_WORKERS $NUM_WORDS $NUM_RECORDS $FILE_PREFIX)
+```
+
+
 Parameters are as follows:
 - `num workers` - how many worker processes Ray is to launch.
 - `num splits` - how much parallelism there will be in the task graph. This will set the number of tasks used to load inputs.
@@ -10,7 +23,7 @@ Parameters are as follows:
 ```
 (NUM_WORKERS=6
 NUM_SPLITS=6
-python wc_ray.py $NUM_WORKERS $NUM_SPLITS /etc/*.conf)
+python wc_ray.py $NUM_WORKERS $NUM_SPLITS wc_test)
 ```
 
 ## Sorting
