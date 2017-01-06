@@ -53,7 +53,7 @@ def tera_gen(filename, start_index, end_index):
 
 if __name__ == '__main__':
     if len(sys.argv) != 6:
-        print "Usage: teragen.py num_workers num_records num_splits file_prefix file_format"
+        print "Usage: teragen.py num_workers num_splits num_records file_prefix file_format"
         sys.exit(1)
     num_workers = int(sys.argv[1])
     num_splits = int(sys.argv[2])
