@@ -1,4 +1,3 @@
-import ray
 import sys
 import hashlib
 import random
@@ -12,9 +11,8 @@ key_len = 10
 queries_per_split = 100
 
 def usage():
-    print "Usage: kvs_ray.py num_workers num_splits inputfile [inputfile ...]"
+    print "Usage: kvs_split.py num_splits inputfile [inputfile ...]"
 
-@ray.remote
 def load_files(input_files):
     t = Timer('load ' + ', '.join(input_files))
     res = np.concatenate([np.load(input_file) for input_file in input_files])
@@ -22,7 +20,6 @@ def load_files(input_files):
     t.finish(len(res))
     return res
 
-@ray.remote
 def hash_split(input, num_splits):
     print "split input of length", len(input)
     splits = defaultdict(list)
@@ -44,13 +41,11 @@ def dict_merge(x, y):
         res[key] = key_sum
     return res
 
-@ray.remote
 def merge_hashed(input_splits):
     res = dict([(line[:key_len], line) for input in input_splits for line in input])
     print "have dict of size", len(res)
     return res
 
-@ray.remote
 def sample_input(input, frac):
     num_samples = int(frac * len(input))
     random.seed(hash(input[0]))
@@ -60,8 +55,6 @@ def sample_input(input, frac):
         samples[i] = input[i][:10]
     return samples
 
-
-@ray.remote
 def _lookup(key, kvs_block):
     # t = Timer('lookup')
     ret = kvs_block[key]
@@ -71,16 +64,15 @@ def _lookup(key, kvs_block):
 def lookup(key, kvs_blocks):
     hash_value = hash(key)
     num_splits = len(kvs_blocks)
-    return _lookup.remote(key, kvs_blocks[hash_value % num_splits])
+    return _lookup(key, kvs_blocks[hash_value % num_splits])
 
-@ray.remote
 def query(query_keys, kvs_blocks):
     t = Timer('query')
     ct = 0
     sumlen = 0
     t_loop = Timer('query-loop')
     for key in query_keys:
-        sumlen += len(ray.get(lookup(key, kvs_blocks)))
+        sumlen += len(lookup(key, kvs_blocks))
         ct += 1
     t_loop.finish(queries_per_split)
     print "lookup count is", ct
@@ -90,34 +82,26 @@ def query(query_keys, kvs_blocks):
 
 def benchmark_kvs(num_splits, input_files):
     t_load = Timer('load')
-    inputs = [load_files.remote(chunk_files) for chunk_files in chunks(input_files, num_splits)]
+    inputs = [load_files(chunk_files) for chunk_files in chunks(input_files, num_splits)]
 
-    hs = [hash_split.remote(input, num_splits) for input in inputs]
-    res = map(merge_hashed.remote, transpose([ray.get(s) for s in hs]))
+    hs = [hash_split(input, num_splits) for input in inputs]
+    res = map(merge_hashed, transpose([s for s in hs]))
 
-    # finish setting up kvs - get each key to make sure it is here
-    [ray.wait([r]) for r in res]
     kvs_blocks = [r for r in res]
 
-    input_samples = [sample_input.remote(input, .01) for input in inputs]
-    query_keys = np.concatenate([ray.get(input_sample) for input_sample in input_samples])
+    input_samples = [sample_input(input, .01) for input in inputs]
+    query_keys = np.concatenate([input_sample for input_sample in input_samples])
 
     t_load.finish()
 
     t_query = Timer('RAY_BENCHMARK_KVS')
-    queries = [query.remote(query_keys, kvs_blocks) for chunk_files in chunks(input_files, num_splits)]
-    [ray.get(q) for q in queries]
+    queries = [query(query_keys, kvs_blocks) for chunk_files in chunks(input_files, num_splits)]
     t_query.finish()
 
 if __name__ == '__main__':
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         usage()
         sys.exit(1)
-    num_workers = int(sys.argv[1])
-    num_splits = int(sys.argv[2])
-    if num_workers < 2 * num_splits:
-        print 'require num_workers >= 2* num_splits'
-        sys.exit(1)
-    input_files = sys.argv[3:]
-    ray.init(start_ray_local=True, num_workers=num_workers)
+    num_splits = int(sys.argv[1])
+    input_files = sys.argv[2:]
     benchmark_kvs(num_splits, input_files)

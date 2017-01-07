@@ -48,7 +48,7 @@ def sort_benchmark(num_partitions, partition_size, input_prefix, filename_format
 
     times = run_split_benchmark('sort_1d_np.py', num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
-    log_result('sort_1d_np', num_partitions, num_records, times)
+    log_result('sort_split', num_partitions, num_records, times)
 
     times = run_serial_benchmark('sort_serial_np.py', num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
@@ -63,6 +63,21 @@ def wc_benchmark(num_partitions, partition_size, input_prefix, filename_format_s
     times = run_serial_benchmark('wc.py', num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
     log_result('wc', num_partitions, num_records, times)
+
+def kvs_benchmark(num_partitions, partition_size, input_prefix, filename_format_str):
+    num_records = num_partitions * partition_size
+    times = run_ray_benchmark('kvs_ray.py', 2 * num_partitions, num_partitions, input_prefix, filename_format_str)
+    print '{} {}'.format(num_partitions, str(times))
+    log_result('kvs_ray', num_partitions, num_records, times)
+
+    times = run_split_benchmark('kvs_split.py', num_partitions, input_prefix, filename_format_str)
+    print '{} {}'.format(num_partitions, str(times))
+    log_result('kvs_split', num_partitions, num_records, times)
+
+
+    times = run_serial_benchmark('kvs.py', num_partitions, input_prefix, filename_format_str)
+    print '{} {}'.format(num_partitions, str(times))
+    log_result('kvs', num_partitions, num_records, times)
 
 def arithmetic_progression(start_str, end_str, step_str):
     start = int(start_str)
@@ -89,7 +104,8 @@ def geometric_progression(start_str, end_str, step_str):
 
 benchmarks = {
     'sort' : sort_benchmark,
-    'wc' : wc_benchmark
+    'wc' : wc_benchmark,
+    'kvs' : kvs_benchmark
 }
 
 progressions = {
