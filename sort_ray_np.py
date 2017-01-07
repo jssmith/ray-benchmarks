@@ -5,6 +5,7 @@ import numpy as np
 import ray
 
 from utils import Timer, chunks, transpose
+from sweep import sweep_iterations
 
 def usage():
     print "Usage: sort_ray_np num_workers num_splits inputfile [inputfile ...]"
@@ -88,5 +89,5 @@ if __name__ == '__main__':
     num_splits = int(sys.argv[2])
     input_files = sys.argv[3:]
     ray.init(start_ray_local=True, num_workers=num_workers)
-    for _ in range(3):
+    for _ in range(sweep_iterations):
         benchmark_sort(num_splits, input_files)

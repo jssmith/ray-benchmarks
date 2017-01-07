@@ -2,6 +2,7 @@ import sys
 import numpy as np
 
 from utils import Timer
+from sweep import sweep_iterations
 
 def usage():
     print "Usage: sort_serial_np.py inputfile [inputfile ...]"
@@ -41,5 +42,5 @@ if __name__ == '__main__':
         usage()
         sys.exit(1)
     input_files = sys.argv[1:]
-    for _ in range(3):
+    for _ in range(sweep_iterations):
         benchmark_sort(input_files)

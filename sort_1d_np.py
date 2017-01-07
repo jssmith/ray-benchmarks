@@ -3,6 +3,7 @@ import random
 import numpy as np
 
 from utils import Timer, chunks, transpose
+from sweep import sweep_iterations
 
 def usage():
     print "Usage: sort_1d num_splits inputfile [inputfile ...]"
@@ -79,5 +80,5 @@ if __name__ == '__main__':
         sys.exit(1)
     num_splits = int(sys.argv[1])
     input_files = sys.argv[2:]
-    for _ in range(3):
+    for _ in range(sweep_iterations):
         benchmark_sort(num_splits, input_files)

@@ -4,6 +4,8 @@ import sys
 import math
 import matgen
 
+sweep_iterations = 1
+
 def run_serial_benchmark(program, num_splits, prefix, filename_format_str):
     args = ['python', program] + [filename_format_str.format(prefix, i) for i in range(num_splits)]
     return run_benchmark(args)
@@ -46,6 +48,10 @@ def sort_benchmark(num_partitions, partition_size, input_prefix, filename_format
     times = run_singlenode_benchmark('sort_ray_np.py', num_partitions, num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(n, str(times))
     log_result('sort_ray_np', num_partitions, num_records, times)
+
+    times = run_singlenode_benchmark('sort_dask_distributed.py', num_partitions, num_partitions, input_prefix, filename_format_str)
+    print '{} {}'.format(n, str(times))
+    log_result('sort_dask_distributed', num_partitions, num_records, times)
 
     times = run_split_benchmark('sort_1d_np.py', num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
