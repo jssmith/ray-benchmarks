@@ -16,8 +16,8 @@ Parameters are as follows:
 
 ```
 (NUM_WORKERS=4
-NUM_SPLITS=5
-NUM_WORDS=500000
+NUM_SPLITS=64
+NUM_WORDS=6400000
 FILE_PREFIX=wc_test
 python wcgen.py $NUM_WORKERS $NUM_SPLITS $NUM_WORDS $FILE_PREFIX)
 ```
@@ -93,7 +93,7 @@ python kvs_ray.py $NUM_WORKERS $NUM_SPLITS sort_test*)
 Parameters are as follows:
 
 - `progression` - either `arithmetic` or `geometric`
-- `start` - starting value
+- `start` - starting value, may use `0` with arithmetic progression to include `1`
 - `end` - ending value
 - `step` - increment, additive for arithmetic progression and multiplicative for geometric progression
 - `benchmark` - what program to test - either `wc` or `sort`
@@ -102,13 +102,13 @@ Parameters are as follows:
 - `file format` - either `text` or `numpy`
 
 ```
-($PROGRESSION=geometric
-$START=1
-$END=64
-$STEP=4
-$BENCHMARK=wc
-$PARTITION_SIZE=100000
-$INPUT_PREFIX=wc_test
-$FILE_FORMAT=text
+(PROGRESSION=geometric
+START=1
+END=64
+STEP=4
+BENCHMARK=wc
+PARTITION_SIZE=100000
+INPUT_PREFIX=wc_test
+FILE_FORMAT=text
 python sweep.py $PROGRESSION $START $END $STEP $BENCHMARK $PARTITION_SIZE $INPUT_PREFIX $FILE_FORMAT)
 ```

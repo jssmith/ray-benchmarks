@@ -19,11 +19,11 @@ def run_ray_benchmark(program, num_workers, num_splits, prefix, filename_format_
     return run_benchmark(args)
 
 def run_benchmark(args):
+    print 'COMMAND'
+    print ' '.join(args)
     proc = Popen(args, stdout=PIPE, stderr=PIPE)
     (stdoutdata, stderrdata) = proc.communicate()
     returncode = proc.returncode
-    print 'COMMAND'
-    print ' '.join(args)
     print 'STDOUT'
     print stdoutdata
     print 'STDERR'
@@ -35,37 +35,43 @@ def run_benchmark(args):
         elapsed_times.append(float(m[1]))
     return elapsed_times
 
-def log_result(benchmark_name, scale, times):
+def log_result(benchmark_name, num_records, scale, times):
     with open('sweep_log.csv', 'a') as f:
         for time in times:
-            f.write('{},{:d},{:f}\n'.format(benchmark_name, scale, time))
+            f.write('{},{:d},{:d},{:f}\n'.format(benchmark_name, num_records, scale, time))
 
 def sort_benchmark(num_partitions, partition_size, input_prefix, filename_format_str):
     num_records = num_partitions * partition_size
     times = run_ray_benchmark('sort_ray_np.py', num_partitions, num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(n, str(times))
-    log_result('sort_ray_np', num_records, times)
+    log_result('sort_ray_np', num_partitions, num_records, times)
 
     times = run_split_benchmark('sort_1d_np.py', num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
-    log_result('sort_1d_np', num_records, times)
+    log_result('sort_1d_np', num_partitions, num_records, times)
 
     times = run_serial_benchmark('sort_serial_np.py', num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
-    log_result('sort_serial_np', num_records, times)
+    log_result('sort_serial_np', num_partitions, num_records, times)
 
 def wc_benchmark(num_partitions, partition_size, input_prefix, filename_format_str):
     num_records = num_partitions * partition_size
     times = run_ray_benchmark('wc_ray.py', num_partitions, num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
-    log_result('wc_ray', num_records, times)
+    log_result('wc_ray', num_partitions, num_records, times)
 
     times = run_serial_benchmark('wc.py', num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
-    log_result('wc', num_records, times)
+    log_result('wc', num_partitions, num_records, times)
 
 def arithmetic_progression(start_str, end_str, step_str):
-    return range(int(start_str), int(end_str) + 1, int(step_str))
+    start = int(start_str)
+    end = int(end_str) + 1
+    step = int(step_str)
+    if start == 0:
+        return [1] + range(step, end, step)
+    else:
+        return range(start, end, step)
 
 def geometric_progression(start_str, end_str, step_str):
     start = float(start_str)
