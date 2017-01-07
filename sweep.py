@@ -13,7 +13,7 @@ def run_split_benchmark(program, num_splits, prefix, filename_format_str):
         str(num_splits)] + [filename_format_str.format(prefix, i) for i in range(num_splits)]
     return run_benchmark(args)
 
-def run_ray_benchmark(program, num_workers, num_splits, prefix, filename_format_str):
+def run_singlenode_benchmark(program, num_workers, num_splits, prefix, filename_format_str):
     args = ['python', program,
         str(num_workers),
         str(num_splits)] + [filename_format_str.format(prefix, i) for i in range(num_splits)]
@@ -43,7 +43,7 @@ def log_result(benchmark_name, num_records, scale, times):
 
 def sort_benchmark(num_partitions, partition_size, input_prefix, filename_format_str):
     num_records = num_partitions * partition_size
-    times = run_ray_benchmark('sort_ray_np.py', num_partitions, num_partitions, input_prefix, filename_format_str)
+    times = run_singlenode_benchmark('sort_ray_np.py', num_partitions, num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(n, str(times))
     log_result('sort_ray_np', num_partitions, num_records, times)
 
@@ -57,7 +57,7 @@ def sort_benchmark(num_partitions, partition_size, input_prefix, filename_format
 
 def wc_benchmark(num_partitions, partition_size, input_prefix, filename_format_str):
     num_records = num_partitions * partition_size
-    times = run_ray_benchmark('wc_ray.py', num_partitions, num_partitions, input_prefix, filename_format_str)
+    times = run_singlenode_benchmark('wc_ray.py', num_partitions, num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
     log_result('wc_ray', num_partitions, num_records, times)
 
@@ -65,9 +65,18 @@ def wc_benchmark(num_partitions, partition_size, input_prefix, filename_format_s
     print '{} {}'.format(num_partitions, str(times))
     log_result('wc', num_partitions, num_records, times)
 
+    times = run_singlenode_benchmark('wc_dask_delayed.py', num_partitions, num_partitions, input_prefix, filename_format_str)
+    print '{} {}'.format(num_partitions, str(times))
+    log_result('wc_dask_delayed', num_partitions, num_records, times)
+
+    times = run_singlenode_benchmark('wc_dask_distributed.py', num_partitions, num_partitions, input_prefix, filename_format_str)
+    print '{} {}'.format(num_partitions, str(times))
+    log_result('wc_dask_distributed', num_partitions, num_records, times)
+
+
 def kvs_benchmark(num_partitions, partition_size, input_prefix, filename_format_str):
     num_records = num_partitions * partition_size
-    times = run_ray_benchmark('kvs_ray.py', 2 * num_partitions, num_partitions, input_prefix, filename_format_str)
+    times = run_singlenode_benchmark('kvs_ray.py', 2 * num_partitions, num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
     log_result('kvs_ray', num_partitions, num_records, times)
 
