@@ -2,6 +2,7 @@ from subprocess import Popen, PIPE
 import re
 import sys
 import math
+import matgen
 
 def run_serial_benchmark(program, num_splits, prefix, filename_format_str):
     args = ['python', program] + [filename_format_str.format(prefix, i) for i in range(num_splits)]
@@ -79,6 +80,20 @@ def kvs_benchmark(num_partitions, partition_size, input_prefix, filename_format_
     print '{} {}'.format(num_partitions, str(times))
     log_result('kvs', num_partitions, num_records, times)
 
+def matmul_benchmark(num_partitions, partition_size, input_prefix, filename_format_str):
+    num_workers = num_partitions * num_partitions
+    num_records = num_partitions * partition_size
+    filename_format_str = matgen.filename_format_str
+    args = ['python', 'matmul_ray.py', str(num_workers), str(num_partitions), input_prefix]
+    times = run_benchmark(args)
+    print '{} {}'.format(num_partitions, str(times))
+    log_result('matmul_ray', num_workers, num_records, times)
+
+    args = ['python', 'matmul.py', str(num_partitions), input_prefix]
+    times = run_benchmark(args)
+    print '{} {}'.format(num_partitions, str(times))
+    log_result('matmul', num_workers, num_records, times)
+
 def arithmetic_progression(start_str, end_str, step_str):
     start = int(start_str)
     end = int(end_str) + 1
@@ -105,7 +120,8 @@ def geometric_progression(start_str, end_str, step_str):
 benchmarks = {
     'sort' : sort_benchmark,
     'wc' : wc_benchmark,
-    'kvs' : kvs_benchmark
+    'kvs' : kvs_benchmark,
+    'matmul' : matmul_benchmark
 }
 
 progressions = {

@@ -9,6 +9,10 @@ def chunks(l, n):
 def transpose(listoflists):
     return map(list, zip(*listoflists))
 
+def init_np_env():
+    os.environ['MKL_NUM_THREADS'] = '1'
+    os.environ['OMP_NUM_THREADS'] = '1'
+
 class Timer(object):
     def __init__(self, name):
         self._name = name
