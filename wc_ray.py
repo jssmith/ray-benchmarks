@@ -65,7 +65,7 @@ def do_wc(num_workers, num_splits, input_files):
     ray.register_class(type(dict_merge.remote), pickle=True)
     print "starting Ray with {} workers".format(num_workers)
     ray.init(start_ray_local=True, num_workers=num_workers)
-    t = Timer("multi")
+    t = Timer("RAY_BENCHMARK_WC")
     results = [wc.remote(input_file) for input_file in chunks(input_files, num_splits)]
     print "number of results is {}".format(len(results))
     #res = reduce(dict_merge.remote, results)

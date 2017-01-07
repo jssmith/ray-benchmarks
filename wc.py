@@ -21,7 +21,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print "Usage: wc.py input_file [input_file ...]"
     input_files = sys.argv[1:]
-    t = Timer('basic word count')
+    t = Timer('RAY_BENCHMARK_WC')
     word_frequencies = wc(input_files)
 
     most_popular_word = None

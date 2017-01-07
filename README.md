@@ -2,18 +2,27 @@
 
 ## Word Count
 
-### Generate data files:
+### Generate data files
 
-We generate synthetic data for the word count benchmark by using a reference file (King Lear)
+We generate synthetic data for the word count benchmark by sampling from a reference text (Shakespeare's King Lear).
+
+Parameters are as follows:
+
+- `num workers` - how many worker processes Ray is to launch.
+- `num splits` - how many tasks will be used to generate random data.
+- `num words` - how many words to generate across all splits.
+- `file prefix` - prefix for generated file names.
+
 
 ```
 (NUM_WORKERS=4
-NUM_WORDS=500000
 NUM_SPLITS=5
+NUM_WORDS=500000
 FILE_PREFIX=wc_test
-python wcgen.py $NUM_WORKERS $NUM_WORDS $NUM_RECORDS $FILE_PREFIX)
+python wcgen.py $NUM_WORKERS $NUM_SPLITS $NUM_WORDS $FILE_PREFIX)
 ```
 
+### Counting words
 
 Parameters are as follows:
 - `num workers` - how many worker processes Ray is to launch.
@@ -21,9 +30,9 @@ Parameters are as follows:
 - `input files` - list of files to sort.
 
 ```
-(NUM_WORKERS=6
-NUM_SPLITS=6
-python wc_ray.py $NUM_WORKERS $NUM_SPLITS wc_test)
+(NUM_WORKERS=5
+NUM_SPLITS=5
+python wc_ray.py $NUM_WORKERS $NUM_SPLITS wc_test_*)
 ```
 
 ## Sorting
@@ -38,13 +47,15 @@ Parameters are as follows:
 - `num splits` - how many tasks will be used to generate random data.
 - `num records` - how many records to produce. This is the aggregate number across all files.
 - `file prefix` - prefix for generated file names.
+- `file format` - file format, either `text` or `numpy`
 
 ```
 (NUM_WORKERS=4
 NUM_RECORDS=1000000
 NUM_SPLITS=25
 FILE_PREFIX=sort_test
-python teragen.py $NUM_WORKERS $NUM_SPLITS $NUM_RECORDS $FILE_PREFIX)
+FILE_FORMAT=numpy
+python teragen.py $NUM_WORKERS $NUM_SPLITS $NUM_RECORDS $FILE_PREFIX $FILE_FORMAT)
 ```
 
 ### Run the benchmark
@@ -75,4 +86,29 @@ Parameters are as follows:
 (NUM_WORKERS=12
 NUM_SPLITS=6
 python kvs_ray.py $NUM_WORKERS $NUM_SPLITS sort_test*)
+```
+
+# Ray Benchmark Parameter Sweeps
+
+Parameters are as follows:
+
+- `progression` - either `arithmetic` or `geometric`
+- `start` - starting value
+- `end` - ending value
+- `step` - increment, additive for arithmetic progression and multiplicative for geometric progression
+- `benchmark` - what program to test - either `wc` or `sort`
+- `partition size` - how many records per partition
+- `input prefix` - input prefix for data files
+- `file format` - either `text` or `numpy`
+
+```
+($PROGRESSION=geometric
+$START=1
+$END=64
+$STEP=4
+$BENCHMARK=wc
+$PARTITION_SIZE=100000
+$INPUT_PREFIX=wc_test
+$FILE_FORMAT=text
+python sweep.py $PROGRESSION $START $END $STEP $BENCHMARK $PARTITION_SIZE $INPUT_PREFIX $FILE_FORMAT)
 ```
