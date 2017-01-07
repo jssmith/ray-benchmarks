@@ -6,7 +6,7 @@ import wc as wclib
 import dask
 from dask import delayed
 import dask.multiprocessing
-from multiprocessing.pool import ThreadPool
+import multiprocessing.pool
 
 from collections import defaultdict
 
@@ -66,5 +66,5 @@ if __name__ == '__main__':
     num_splits = int(sys.argv[2])
     input_files = sys.argv[3:]
     dask.set_options(get=dask.multiprocessing.get)
-    dask.set_options(pool=ThreadPool(num_workers))
+    dask.set_options(pool=multiprocessing.pool.Pool(num_workers))
     do_wc(num_splits, input_files)
