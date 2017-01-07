@@ -1,8 +1,12 @@
 import sys
 import re
 
-from dask import delayed
 import wc as wclib
+
+import dask
+from dask import delayed
+import dask.multiprocessing
+from multiprocessing.pool import ThreadPool
 
 from collections import defaultdict
 
@@ -35,7 +39,7 @@ def dict_merge(x, y):
         res[key] = key_sum
     return res
 
-def do_wc(num_workers, num_splits, input_files):
+def do_wc(um_splits, input_files):
     t = Timer("RAY_BENCHMARK_WC")
     results = [delayed(wclib.wc)(inputs) for inputs in chunks(input_files, num_splits)]
     print "number of results is {}".format(len(results))
@@ -61,4 +65,6 @@ if __name__ == '__main__':
     num_workers = int(sys.argv[1])
     num_splits = int(sys.argv[2])
     input_files = sys.argv[3:]
-    do_wc(num_workers, num_splits, input_files)
+    dask.set_options(get=dask.multiprocessing.get)
+    dask.set_options(pool=ThreadPool(num_workers))
+    do_wc(num_splits, input_files)
