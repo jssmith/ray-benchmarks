@@ -28,9 +28,7 @@ class DistributionStats(object):
         if self._timestamp is None:
             self._timestamp = timestamp
             self._timestamp_offset = timestamp
-            # print "starting timestamp is ", timestamp
         else:
-            # print "timestamp is now", timestamp
             if timestamp < self._timestamp:
                 raise RuntimeError("Decreasing timestamp")
             else:

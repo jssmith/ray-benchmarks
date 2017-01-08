@@ -134,8 +134,6 @@ def read_stats(redis_address):
     r = redis.StrictRedis(host, port)
     all_events = [build_event(key, event_data) for key in r.keys('event*') for lrange in r.lrange(key, 0, -1) for event_data in json.loads(lrange)]
     all_events.sort(key=lambda x: x['timestamp'])
-    for e in all_events:
-        print(str(e))
     with gzip.open("events.json.gz", "w") as f:
         json.dump(all_events, f)
     print "number of events is", len(all_events)
