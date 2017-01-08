@@ -118,7 +118,7 @@ def plot_worker_activity(data, title, pdf):
     ax.set_title(title)
 
     legend_labels = ['benchmark'] + [b[0].replace('ray:', '') for b in plot_bars]
-    ax.legend(legend_labels, loc=4, ncol=4, mode="expand", borderaxespad=0., 
+    ax.legend(legend_labels, loc=4, ncol=4, mode="expand", borderaxespad=0.,
         bbox_to_anchor=(0., -.1, 1., .1))
 
     pdf.savefig(fig)
