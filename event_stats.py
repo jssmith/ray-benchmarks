@@ -1,5 +1,6 @@
 import redis
 import json
+import gzip
 from collections import defaultdict
 from math import sqrt
 
@@ -44,10 +45,19 @@ class BasicStatistics(object):
     def __str__(self):
         return '{},{},[{},{},{}],{}'.format(self.total_elapsed_time, self.ct, self.min_elapsed_time, self.avg_time(), self.max_elapsed_time, self.stddev_time())
 
-class Event(object):
-    def __init__(self, key, value):
-        self.key = key
-        (self.timestamp, self.event_type, self.status, self.extras) = value
+def bytestohex(key):
+    return ''.join([c.encode('hex') for c in key])
+
+def build_event(key, value):
+    (timestamp, event_type, status, extras) = value
+    return {
+        'worker_id' : bytestohex(key[10:30]),
+        'task_id' : bytestohex(key[31:51]),
+        'timestamp' : timestamp,
+        'event_type' : event_type,
+        'status' : status,
+        'extras' : extras
+    }
 
 class Analysis(object):
     def __init__(self):
@@ -79,27 +89,26 @@ class Analysis(object):
         self._durations['{}:{}:{}'.format(start_phase, end_phase, event_type)].add(elapsed_time)
 
     def add_event(self, e):
-        event_key = (e.key, e.event_type)
-        if e.event_type.startswith('benchmark:'):
-            if e.status == 1:
-                self._benchmark_phase = e.event_type[10:]
-                self._benchmark_phase_start_timestamp = e.timestamp
-                self._start(e.timestamp, event_key)
-            elif e.status == 2:
-                self._finish(e.timestamp, event_key, e.event_type)
+        event_key = (e['worker_id'], e['task_id'], e['event_type'])
+        if e['event_type'].startswith('benchmark:'):
+            if e['status'] == 1:
+                self._benchmark_phase = e['event_type'][10:]
+                self._benchmark_phase_start_timestamp = e['timestamp']
+                self._start(e['timestamp'], event_key)
+            elif e['status'] == 2:
+                self._finish(e['timestamp'], event_key, e['event_type'])
                 self._benchmark_phase = None
-                self._benchmark_phase_start_timestamp = e.timestamp
+                self._benchmark_phase_start_timestamp = e['timestamp']
                 self._benchmark_phase_id += 1
             else:
-                raise RuntimeError("unknown status {}".format(s.status))    
+                raise RuntimeError("unknown status {}".format(e['status']))    
         else:
-            if e.status == 1:
-                self._start(e.timestamp, event_key)
-            elif e.status == 2:
-                self._finish(e.timestamp, event_key, e.event_type)
+            if e['status'] == 1:
+                self._start(e['timestamp'], event_key)
+            elif e['status'] == 2:
+                self._finish(e['timestamp'], event_key, e['event_type'])
             else:
-                raise RuntimeError("unknown status {}".format(s.status))
-            # print e.event_type
+                print "skipping event with unknown status {}".format(e['status'], str(e))
 
     def print_summary(self):
         for k, v in sorted(self._durations.items()):
@@ -119,9 +128,13 @@ def read_stats(redis_address):
     (host, port) = redis_address.split(':')
     port = int(port)
     r = redis.StrictRedis(host, port)
-    all_events = [Event(key, event_data) for key in r.keys('event*') for event_data in json.loads(r.lrange(key, 0, -1)[0])]
+    all_events = [build_event(key, event_data) for key in r.keys('event*') for lrange in r.lrange(key, 0, -1) for event_data in json.loads(lrange)]
+    all_events.sort(key=lambda x: x['timestamp'])
+    for e in all_events:
+        print(str(e))
+    with gzip.open("events.json.gz", "w") as f:
+        json.dump(all_events, f)
     print "number of events is", len(all_events)
-    all_events.sort(key=lambda x: x.timestamp)
     a = Analysis()
     for event in all_events:
         a.add_event(event)
