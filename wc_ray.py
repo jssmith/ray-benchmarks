@@ -70,6 +70,9 @@ def do_wc(num_workers, num_splits, input_files):
         #res = reduce(dict_merge.remote, results)
         res = tree_reduce_remote.remote(dict_merge, results)
 
+        # block and wait for all to finish
+        [ray.wait[r] for r in res]
+
         # find most common word
         most_popular_word = None
         most_popular_ct = 0

@@ -56,7 +56,7 @@ def plot_worker_activity(data, title, pdf):
     baseline = padding / 2
 
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(20,20))
     ax = fig.add_subplot(111)
 
     active_ranges_benchmark = defaultdict(list)
@@ -75,6 +75,20 @@ def plot_worker_activity(data, title, pdf):
         print "no benchmark interval measurement found"
     plt.broken_barh(active_ranges_benchmark['benchmark:measure'], (0, len(workers)), color='#ffcce6')
 
+
+    plot_bars = [
+        ('ray:task', 'gray'),
+        ('ray:task:execute', '#33cc33'),
+        ('ray:task:get_arguments', '#ff5252'),
+        ('ray:task:store_outputs', '#ff7d52'),
+        ('ray:put', '#9933ff'),
+        ('ray:get', '#cc0099'),
+        ('ray:wait', '#808080'),
+        ('ray:wait_for_import_counter', '#000000'),
+        ('ray:submit_task', '#00ffff'),
+        ('ray:task:reinitialize_reusables', '#000000'),
+        ('ray:acquire_lock', '#ff0000')]
+
     ignored_event_types = frozenset(['ray:get_task'])
     for worker in workers:
         last_started = {}
@@ -87,18 +101,6 @@ def plot_worker_activity(data, title, pdf):
             elif status == 'end':
                 active_ranges[event_type].append((last_started[event_type], timestamp - last_started[event_type]))
                 del last_started[event_type]
-        plot_bars = [
-            ('ray:task', 'gray'),
-            ('ray:task:execute', '#33cc33'),
-            ('ray:task:get_arguments', '#ff5252'),
-            ('ray:task:store_outputs', '#ff7d52'),
-            ('ray:put', '#9933ff'),
-            ('ray:get', '#cc0099'),
-            ('ray:wait', '#808080'),
-            ('ray:wait_for_import_counter', '#000000'),
-            ('ray:submit_task', '#00ffff'),
-            ('ray:task:reinitialize_reusables', '#000000'),
-            ('ray:acquire_lock', '#ff0000')]
         for event_type, color in plot_bars:
             plt.broken_barh(active_ranges[event_type], (baseline, width), color=color)
         baseline += width + padding
@@ -114,6 +116,10 @@ def plot_worker_activity(data, title, pdf):
     ax.set_xlabel('Time [seconds]')
 
     ax.set_title(title)
+
+    legend_labels = ['benchmark'] + [b[0].replace('ray:', '') for b in plot_bars]
+    ax.legend(legend_labels, loc=4, ncol=4, mode="expand", borderaxespad=0., 
+        bbox_to_anchor=(0., -.1, 1., .1))
 
     pdf.savefig(fig)
     plt.close(fig)
