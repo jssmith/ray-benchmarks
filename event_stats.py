@@ -88,7 +88,7 @@ class Analysis(object):
             elif e.status == 2:
                 self._finish(e.timestamp, event_key, e.event_type)
                 self._benchmark_phase = None
-                self._benchmark_phase_start_timestamp = None
+                self._benchmark_phase_start_timestamp = e.timestamp
                 self._benchmark_phase_id += 1
             else:
                 raise RuntimeError("unknown status {}".format(s.status))    
