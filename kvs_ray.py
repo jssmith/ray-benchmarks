@@ -7,6 +7,8 @@ import numpy as np
 from collections import defaultdict
 from random import shuffle
 from utils import Timer, chunks, transpose
+from sweep import sweep_iterations
+import event_stats
 
 key_len = 10
 queries_per_split = 100
@@ -89,25 +91,23 @@ def query(query_keys, kvs_blocks):
     return (ct, sumlen)
 
 def benchmark_kvs(num_splits, input_files):
-    t_load = Timer('load')
-    inputs = [load_files.remote(chunk_files) for chunk_files in chunks(input_files, num_splits)]
+    with event_stats.benchmark_init():
+        inputs = [load_files.remote(chunk_files) for chunk_files in chunks(input_files, num_splits)]
+        [ray.wait([input]) for input in inputs]
 
-    hs = [hash_split.remote(input, num_splits) for input in inputs]
-    res = map(merge_hashed.remote, transpose([ray.get(s) for s in hs]))
+        hs = [hash_split.remote(input, num_splits) for input in inputs]
+        kvs_blocks = map(merge_hashed.remote, transpose([ray.get(s) for s in hs]))
 
-    # finish setting up kvs - get each key to make sure it is here
-    [ray.wait([r]) for r in res]
-    kvs_blocks = [r for r in res]
+        [ray.wait([b]) for b in kvs_blocks]
 
-    input_samples = [sample_input.remote(input, .01) for input in inputs]
-    query_keys = np.concatenate([ray.get(input_sample) for input_sample in input_samples])
+        # finish setting up kvs - get each key to make sure it is here
+        input_samples = [sample_input.remote(input, .01) for input in inputs]
+        query_keys = np.concatenate([ray.get(input_sample) for input_sample in input_samples])
 
-    t_load.finish()
+    with event_stats.benchmark_measure():
+        queries = [query.remote(query_keys, kvs_blocks) for chunk_files in chunks(input_files, num_splits)]
+        [ray.wait([q]) for q in queries]
 
-    t_query = Timer('RAY_BENCHMARK_KVS')
-    queries = [query.remote(query_keys, kvs_blocks) for chunk_files in chunks(input_files, num_splits)]
-    [ray.get(q) for q in queries]
-    t_query.finish()
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
@@ -119,5 +119,17 @@ if __name__ == '__main__':
         print 'require num_workers >= 2* num_splits'
         sys.exit(1)
     input_files = sys.argv[3:]
-    ray.init(start_ray_local=True, num_workers=num_workers)
-    benchmark_kvs(num_splits, input_files)
+    address_info = ray.init(start_ray_local=True, num_workers=num_workers)
+    for _ in range(sweep_iterations):
+        benchmark_kvs(num_splits, input_files)
+    ray.flush_log()
+    config_info = {
+        'benchmark_name' : 'kvs',
+        'benchmark_implementation' : 'ray',
+        'benchmark_iterations' : sweep_iterations,
+        'num_workers' : num_workers,
+        'num_splits' : num_splits,
+        'input_file_base' : input_files[0],
+        'num_inputs' : len(input_files)
+    }
+    event_stats.print_stats_summary(config_info, address_info['redis_address'])
