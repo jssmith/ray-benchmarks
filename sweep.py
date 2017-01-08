@@ -5,7 +5,7 @@ import math
 import matgen
 import json
 
-sweep_iterations = 2
+sweep_iterations = 3
 
 def run_serial_benchmark(program, num_splits, prefix, filename_format_str):
     args = ['python', program] + [filename_format_str.format(prefix, i) for i in range(num_splits)]
