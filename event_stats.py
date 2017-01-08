@@ -3,6 +3,7 @@ import json
 import gzip
 from collections import defaultdict
 from math import sqrt
+import time
 
 from ray.worker import RayLogSpan
 
@@ -125,6 +126,9 @@ def benchmark_measure():
     return RayLogSpan('benchmark:measure')
 
 def read_stats(redis_address):
+    # sleep briefly to allow driver writes to redis to propagate
+    time.sleep(2)
+
     (host, port) = redis_address.split(':')
     port = int(port)
     r = redis.StrictRedis(host, port)
