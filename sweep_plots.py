@@ -116,7 +116,8 @@ def plot_all(data):
                     timing = run['timing']
                     if 'measure:measure:benchmark:measure' in timing:
                         avg_elapsed_time = timing['measure:measure:benchmark:measure']['avg_elapsed_time']
-                        relative_time.append((num_inputs, ref_times[num_inputs] / avg_elapsed_time))
+                        if num_inputs in ref_times:
+                            relative_time.append((num_inputs, ref_times[num_inputs] / avg_elapsed_time))
                     else:
                         print "timing measurement not found"
                 # print "plot ", series, measured_time

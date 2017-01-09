@@ -6,6 +6,9 @@ import numpy as np
 from collections import defaultdict
 from random import shuffle
 from utils import Timer, chunks, transpose
+from sweep import sweep_iterations
+
+import event_stats
 
 key_len = 10
 queries_per_split = 100
@@ -81,22 +84,20 @@ def query(query_keys, kvs_blocks):
     return (ct, sumlen)
 
 def benchmark_kvs(num_splits, input_files):
-    t_load = Timer('load')
-    inputs = [load_files(chunk_files) for chunk_files in chunks(input_files, num_splits)]
+    with event_stats.benchmark_init_noray():
+        inputs = [load_files(chunk_files) for chunk_files in chunks(input_files, num_splits)]
 
-    hs = [hash_split(input, num_splits) for input in inputs]
-    res = map(merge_hashed, transpose([s for s in hs]))
+        hs = [hash_split(input, num_splits) for input in inputs]
+        res = map(merge_hashed, transpose([s for s in hs]))
 
-    kvs_blocks = [r for r in res]
+        kvs_blocks = [r for r in res]
 
-    input_samples = [sample_input(input, .01) for input in inputs]
-    query_keys = np.concatenate([input_sample for input_sample in input_samples])
+        input_samples = [sample_input(input, .01) for input in inputs]
+        query_keys = np.concatenate([input_sample for input_sample in input_samples])
 
-    t_load.finish()
 
-    t_query = Timer('RAY_BENCHMARK_KVS')
-    queries = [query(query_keys, kvs_blocks) for chunk_files in chunks(input_files, num_splits)]
-    t_query.finish()
+    with event_stats.benchmark_measure_noray():
+        queries = [query(query_keys, kvs_blocks) for chunk_files in chunks(input_files, num_splits)]
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
@@ -104,4 +105,14 @@ if __name__ == '__main__':
         sys.exit(1)
     num_splits = int(sys.argv[1])
     input_files = sys.argv[2:]
-    benchmark_kvs(num_splits, input_files)
+    for _ in range(sweep_iterations):
+        benchmark_kvs(num_splits, input_files)
+    config_info = {
+        'benchmark_name' : 'kvs',
+        'benchmark_implementation' : 'serial_raylike',
+        'benchmark_iterations' : sweep_iterations,
+        'num_splits' : num_splits,
+        'input_file_base' : input_files[0],
+        'num_inputs' : len(input_files)
+    }
+    event_stats.print_stats_summary_noray(config_info)
