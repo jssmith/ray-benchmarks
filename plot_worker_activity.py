@@ -86,14 +86,17 @@ def plot_worker_activity(data, title, pdf):
         ('ray:wait', '#808080'),
         ('ray:wait_for_import_counter', '#000000'),
         ('ray:submit_task', '#00ffff'),
-        ('ray:task:reinitialize_reusables', '#000000'),
+        ('ray:task:reinitialize_reusables', '#47476b'),
         ('ray:acquire_lock', '#ff0000')]
 
     ignored_event_types = frozenset(['ray:get_task'])
+    max_timestamp = 0
     for worker in workers:
         last_started = {}
         active_ranges = defaultdict(list)
         for (timestamp, (task_id, event_type, status)) in data[worker]:
+            if timestamp > max_timestamp:
+                max_timestamp = timestamp
             if event_type in ignored_event_types:
                 continue
             if status == 'start':
@@ -112,12 +115,15 @@ def plot_worker_activity(data, title, pdf):
 
     ax.set_ylabel('Worker ID')
     ax.set_yticks(list(0.5 + x for x in range(len(workers))))
+    ax.set_ylim(0, len(workers))
     ax.set_yticklabels(map(lambda x: str(x)[:8], workers))
+    
     ax.set_xlabel('Time [seconds]')
+    ax.set_xlim(0, max_timestamp)
 
     ax.set_title(title)
 
-    legend_labels = ['benchmark'] + [b[0].replace('ray:', '') for b in plot_bars]
+    legend_labels = ['init / benchmark'] + [b[0].replace('ray:', '') for b in plot_bars]
     ax.legend(legend_labels, loc=4, ncol=4, mode="expand", borderaxespad=0.,
         bbox_to_anchor=(0., -.1, 1., .1))
 
