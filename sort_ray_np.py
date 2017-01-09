@@ -66,7 +66,7 @@ def benchmark_sort(num_splits, input_files):
     with event_stats.benchmark_measure():
         # sample each input
         # todo - number of samples proprtional to number of records
-        samples = map(lambda (input, index): sample_input.remote(input, 10, index), zip(inputs, range(len(inputs))))
+        samples = map(lambda (input, index): sample_input.remote(input, 1000, index), zip(inputs, range(len(inputs))))
 
         # flatten samples
         samples_sorted = np.sort(np.concatenate([ray.get(sample) for sample in samples]))
