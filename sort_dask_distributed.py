@@ -3,9 +3,12 @@ import random
 import numpy as np
 
 from distributed import Client, local_client
+from distributed.client import wait
 
 from utils import Timer, chunks, transpose
 from sweep import sweep_iterations
+
+import event_stats
 
 def usage():
     print "Usage: sort_ray_np num_workers num_splits inputfile [inputfile ...]"
@@ -75,26 +78,27 @@ def extract_range(input_sorted, r, j):
     return input_sorted[s:e]
 
 def benchmark_sort(client, num_splits, input_files):
-    t = Timer("RAY_BENCHMARK_SORT")
-    inputs = list(client.map(load_files, chunks(input_files, num_splits)))
+    with event_stats.benchmark_init_noray():
+        inputs = list(client.map(load_files, chunks(input_files, num_splits)))
+        wait(inputs)
 
-    # sample each input
-    # todo - number of samples proprtional to number of records
-    samples = client.map(lambda (input, index): sample_input(input, 10, index), zip(inputs, range(len(inputs))))
+    with event_stats.benchmark_measure_noray():
+        # sample each input
+        # todo - number of samples proprtional to number of records
+        samples = client.map(lambda (input, index): sample_input(input, 10, index), zip(inputs, range(len(inputs))))
 
-    # flatten samples
-    samples_sorted = client.submit(lambda x: np.sort(np.concatenate(x)), samples)
+        # flatten samples
+        samples_sorted = client.submit(lambda x: np.sort(np.concatenate(x)), samples)
 
-    # compute sample splits
-    split_points = client.submit(get_split_points, samples_sorted, num_splits)
+        # compute sample splits
+        split_points = client.submit(get_split_points, samples_sorted, num_splits)
 
-    inputs_sorted = client.map(np.sort, inputs)
-    isi = [client.submit(input_split_indexes, input_sorted, split_points) for input_sorted in inputs_sorted]
-    sorted_blocks = [[client.submit(extract_range, inputs_sorted[i], isi[i], j) for j in range(num_splits)] for i in range(num_splits)]
+        inputs_sorted = client.map(np.sort, inputs)
+        isi = [client.submit(input_split_indexes, input_sorted, split_points) for input_sorted in inputs_sorted]
+        sorted_blocks = [[client.submit(extract_range, inputs_sorted[i], isi[i], j) for j in range(num_splits)] for i in range(num_splits)]
 
-    res = [client.submit(merge_sorted, b) for b in transpose(sorted_blocks)]
-    client.gather(res)
-    t.finish()
+        res = [client.submit(merge_sorted, b) for b in transpose(sorted_blocks)]
+        wait(res)
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
@@ -106,3 +110,13 @@ if __name__ == '__main__':
     client = Client()
     for _ in range(sweep_iterations):
         benchmark_sort(client, num_splits, input_files)
+    config_info = {
+        'benchmark_name' : 'sort',
+        'benchmark_implementation' : 'dask_distributed',
+        'num_workers' : num_workers,
+        'num_splits' : num_splits,
+        'benchmark_iterations' : sweep_iterations,
+        'input_file_base' : input_files[0],
+        'num_inputs' : len(input_files)
+    }
+    event_stats.print_stats_summary_noray(config_info)

@@ -46,29 +46,35 @@ def log_result(benchmark_name, num_records, num_partitions, stats):
         json.dump(stats, f)
         f.write('\n')
 
-def sort_benchmark(num_partitions, partition_size, input_prefix, filename_format_str):
+def sort_benchmark(num_partitions, partition_size, input_prefix, filename_format_str, ray_only):
     num_records = num_partitions * partition_size
     times = run_singlenode_benchmark('sort_ray_np.py', num_partitions, num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(n, str(times))
     log_result('sort_ray_np', num_partitions, num_records, times)
 
-    # times = run_singlenode_benchmark('sort_dask_distributed.py', num_partitions, num_partitions, input_prefix, filename_format_str)
-    # print '{} {}'.format(n, str(times))
-    # log_result('sort_dask_distributed', num_partitions, num_records, times)
+    if ray_only:
+        return
 
-    # times = run_split_benchmark('sort_1d_np.py', num_partitions, input_prefix, filename_format_str)
-    # print '{} {}'.format(num_partitions, str(times))
-    # log_result('sort_split', num_partitions, num_records, times)
+    times = run_singlenode_benchmark('sort_dask_distributed.py', num_partitions, num_partitions, input_prefix, filename_format_str)
+    print '{} {}'.format(n, str(times))
+    log_result('sort_dask_distributed', num_partitions, num_records, times)
 
-    # times = run_serial_benchmark('sort_serial_np.py', num_partitions, input_prefix, filename_format_str)
-    # print '{} {}'.format(num_partitions, str(times))
-    # log_result('sort_serial_np', num_partitions, num_records, times)
+    times = run_split_benchmark('sort_1d_np.py', num_partitions, input_prefix, filename_format_str)
+    print '{} {}'.format(num_partitions, str(times))
+    log_result('sort_split', num_partitions, num_records, times)
 
-def wc_benchmark(num_partitions, partition_size, input_prefix, filename_format_str):
+    times = run_serial_benchmark('sort_serial_np.py', num_partitions, input_prefix, filename_format_str)
+    print '{} {}'.format(num_partitions, str(times))
+    log_result('sort_serial_np', num_partitions, num_records, times)
+
+def wc_benchmark(num_partitions, partition_size, input_prefix, filename_format_str, ray_only):
     num_records = num_partitions * partition_size
     times = run_singlenode_benchmark('wc_ray.py', num_partitions, num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
     log_result('wc_ray', num_partitions, num_records, times)
+
+    if ray_only:
+        return
 
     # times = run_serial_benchmark('wc.py', num_partitions, input_prefix, filename_format_str)
     # print '{} {}'.format(num_partitions, str(times))
@@ -83,11 +89,14 @@ def wc_benchmark(num_partitions, partition_size, input_prefix, filename_format_s
     # log_result('wc_dask_distributed', num_partitions, num_records, times)
 
 
-def kvs_benchmark(num_partitions, partition_size, input_prefix, filename_format_str):
+def kvs_benchmark(num_partitions, partition_size, input_prefix, filename_format_str, ray_only):
     num_records = num_partitions * partition_size
     times = run_singlenode_benchmark('kvs_ray.py', 2 * num_partitions, num_partitions, input_prefix, filename_format_str)
     print '{} {}'.format(num_partitions, str(times))
     log_result('kvs_ray', num_partitions, num_records, times)
+
+    if ray_only:
+        return
 
     # times = run_split_benchmark('kvs_split.py', num_partitions, input_prefix, filename_format_str)
     # print '{} {}'.format(num_partitions, str(times))
@@ -98,7 +107,7 @@ def kvs_benchmark(num_partitions, partition_size, input_prefix, filename_format_
     # print '{} {}'.format(num_partitions, str(times))
     # log_result('kvs', num_partitions, num_records, times)
 
-def matmul_benchmark(num_partitions, partition_size, input_prefix, filename_format_str):
+def matmul_benchmark(num_partitions, partition_size, input_prefix, filename_format_str, ray_only):
     num_workers = num_partitions * num_partitions
     num_records = num_partitions * partition_size
     filename_format_str = matgen.filename_format_str
@@ -106,6 +115,7 @@ def matmul_benchmark(num_partitions, partition_size, input_prefix, filename_form
     times = run_benchmark(args)
     print '{} {}'.format(num_partitions, str(times))
     log_result('matmul_ray', num_workers, num_records, times)
+
 
     # args = ['python', 'matmul.py', str(num_partitions), input_prefix]
     # times = run_benchmark(args)
@@ -148,8 +158,8 @@ progressions = {
 }
 
 if __name__ == '__main__':
-    if len(sys.argv) != 9:
-        print "Usage: sweep.py progression start end step benchmark partition_size input_prefix file_format"
+    if len(sys.argv) != 10:
+        print "Usage: sweep.py progression start end step benchmark partition_size input_prefix file_format ray_only"
         sys.exit(1)
     progression = progressions[sys.argv[1]]
     start_str = sys.argv[2]
@@ -159,6 +169,7 @@ if __name__ == '__main__':
     partition_size = int(sys.argv[6])
     input_prefix = sys.argv[7]
     file_format = sys.argv[8]
+    ray_only = args[9] == 'true'
     if file_format == 'text':
         filename_format_str = "{}_{:03d}"
     elif file_format == 'numpy':
@@ -167,4 +178,4 @@ if __name__ == '__main__':
         print "File format must be either 'text' or 'numpy'"
         sys.exit(1)
     for n in progression(start_str, end_str, step_str):
-        benchmark(n, partition_size, input_prefix, filename_format_str)
+        benchmark(n, partition_size, input_prefix, filename_format_str, ray_only)

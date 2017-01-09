@@ -147,3 +147,41 @@ def print_stats_summary(config_info, redis_address):
     stats['config'] = config_info
     stats['timing'] = read_stats(redis_address)
     print "BENCHMARK_STATS:", json.dumps(stats)
+
+
+_events = []
+
+class BenchmarkLogSpan():
+    def __init__(self, name):
+        self._name = name
+
+    def _event(self, status):
+        _events.append({
+                'timestamp' : time.time(),
+                'worker_id' : -1,
+                'task_id' : -1,
+                'event_type' : self._name,
+                'status' : status,
+                'extras' : {},
+            })
+
+    def __enter__(self):
+        self._event(1)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._event(2)
+
+def benchmark_init_noray():
+    return BenchmarkLogSpan('benchmark:init')
+
+def benchmark_measure_noray():
+    return BenchmarkLogSpan('benchmark:measure')
+
+def print_stats_summary_noray(config_info):
+    stats = {}
+    stats['config'] = config_info
+    a = Analysis()
+    for event in _events:
+        a.add_event(event)
+    stats['timing'] = a.summary_stats()
+    print "BENCHMARK_STATS:", json.dumps(stats)

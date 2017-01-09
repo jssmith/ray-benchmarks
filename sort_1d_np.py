@@ -5,6 +5,8 @@ import numpy as np
 from utils import Timer, chunks, transpose
 from sweep import sweep_iterations
 
+import event_stats
+
 def usage():
     print "Usage: sort_1d num_splits inputfile [inputfile ...]"
 
@@ -46,32 +48,32 @@ def merge_sorted(input_splits):
     return res
 
 def benchmark_sort(num_splits, input_files):
-    t = Timer("RAY_BENCHMARK_SORT")
-    file_chunks = chunks(input_files, num_splits)
-    # print "file chunks", list(file_chunks)
-    # assume uniform file sizes
-    inputs = [load_files(chunk_files) for chunk_files in chunks(input_files, num_splits)]
+    with event_stats.benchmark_init_noray():
+        file_chunks = chunks(input_files, num_splits)
+        # print "file chunks", list(file_chunks)
+        # assume uniform file sizes
+        inputs = [load_files(chunk_files) for chunk_files in chunks(input_files, num_splits)]
 
-    # sample each input
-    # todo - number of samples proprtional to number of records
-    samples = map(lambda (input, index): sample_input(input, 10, index), zip(inputs, range(len(inputs))))
+    with event_stats.benchmark_measure_noray():
+        # sample each input
+        # todo - number of samples proprtional to number of records
+        samples = map(lambda (input, index): sample_input(input, 10, index), zip(inputs, range(len(inputs))))
 
-    # flatten samples
-    samples_sorted = np.sort(np.concatenate([sample for sample in samples]))
-    # compute sample splits
-    num_samples = len(samples_sorted)
-    samples_per_split = float(num_samples) / num_splits
-    split_points = []
-    split_point = samples_per_split
-    while split_point < num_samples:
-        split_points.append(samples_sorted[int(split_point)])
-        print "split point at '{}...'".format(split_points[-1][:10])
-        split_point += samples_per_split
+        # flatten samples
+        samples_sorted = np.sort(np.concatenate([sample for sample in samples]))
+        # compute sample splits
+        num_samples = len(samples_sorted)
+        samples_per_split = float(num_samples) / num_splits
+        split_points = []
+        split_point = samples_per_split
+        while split_point < num_samples:
+            split_points.append(samples_sorted[int(split_point)])
+            print "split point at '{}...'".format(split_points[-1][:10])
+            split_point += samples_per_split
 
-    ss = [sort_split(input, split_points) for input in inputs]
-    res = map(merge_sorted, transpose([s for s in ss]))
-    # TODO be sure to get
-    t.finish()
+        ss = [sort_split(input, split_points) for input in inputs]
+        res = map(merge_sorted, transpose([s for s in ss]))
+        # TODO be sure to get
 
 
 if __name__ == '__main__':
@@ -82,3 +84,12 @@ if __name__ == '__main__':
     input_files = sys.argv[2:]
     for _ in range(sweep_iterations):
         benchmark_sort(num_splits, input_files)
+    config_info = {
+        'benchmark_name' : 'sort',
+        'benchmark_implementation' : 'serial_raylike',
+        'num_splits' : num_splits,
+        'benchmark_iterations' : sweep_iterations,
+        'input_file_base' : input_files[0],
+        'num_inputs' : len(input_files)
+    }
+    event_stats.print_stats_summary_noray(config_info)
