@@ -12,13 +12,16 @@ FILE_FORMAT=text
 python sweep.py $PROGRESSION $START $END $STEP $BENCHMARK $PARTITION_SIZE $INPUT_PREFIX $FILE_FORMAT)
 mv events.json.gz output/events_wc.json.gz
 
-# This benchmark is running really slowly
-#(BENCHMARK=kvs
-#PARTITION_SIZE=10000
-#INPUT_PREFIX=sort_test_10k
-#FILE_FORMAT=numpy
-#python sweep.py $PROGRESSION $START $END $STEP $BENCHMARK $PARTITION_SIZE $INPUT_PREFIX $FILE_FORMAT)
-#mv events.json.gz output/events_kvs.json.gz
+(BENCHMARK=kvs
+PROGRESSION=arithmetic
+START=4
+END=4
+STEP=1
+PARTITION_SIZE=10000
+INPUT_PREFIX=sort_test_10k
+FILE_FORMAT=numpy
+python sweep.py $PROGRESSION $START $END $STEP $BENCHMARK $PARTITION_SIZE $INPUT_PREFIX $FILE_FORMAT)
+mv events.json.gz output/events_kvs.json.gz
 
 (BENCHMARK=sort
 PARTITION_SIZE=10000
