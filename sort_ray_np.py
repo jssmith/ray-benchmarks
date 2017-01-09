@@ -52,6 +52,7 @@ def merge_sorted(input_splits):
     # todo - maybe merge sort since inputs already sorted
     res = np.sort(np.concatenate([ray.get(input) for input in input_splits]))
     t.finish()
+    print "finished merge with {} records".format(len(res))
     return res
 
 def benchmark_sort(num_splits, input_files):
