@@ -71,7 +71,7 @@ def plot_all(data):
 
             for i, series in enumerate(all_series):
                 series_data = [x for x in plot_data if key_series(x) == series]
-                print "series", series, "has length", len(series_data)
+                # print "series", series, "has length", len(series_data)
                 measured_time = []
                 for run in series_data:
                     config = run['config']
@@ -81,7 +81,7 @@ def plot_all(data):
                         measured_time.append((config['num_inputs'], avg_elapsed_time))
                     else:
                         print "timing measurement not found"
-                print "plot ", series, measured_time
+                # print "plot ", series, measured_time
                 p = ax.plot([t[0] for t in measured_time], [t[1] for t in measured_time],
                     color=color_sequence[i], marker='o')
             ax.legend(all_series, loc=2)
@@ -108,7 +108,7 @@ def plot_all(data):
 
             for i, series in enumerate(all_series):
                 series_data = [x for x in plot_data if key_series(x) == series]
-                print "series", series, "has length", len(series_data)
+                # print "series", series, "has length", len(series_data)
                 relative_time = []
                 for run in series_data:
                     config = run['config']
@@ -119,7 +119,7 @@ def plot_all(data):
                         relative_time.append((num_inputs, ref_times[num_inputs] / avg_elapsed_time))
                     else:
                         print "timing measurement not found"
-                print "plot ", series, measured_time
+                # print "plot ", series, measured_time
                 p = ax.plot([t[0] for t in relative_time], [t[1] for t in relative_time],
                     color=color_sequence[i], marker='o')
             ax.legend(all_series, loc=2)
