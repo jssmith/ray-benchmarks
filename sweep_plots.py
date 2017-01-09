@@ -4,40 +4,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 from itertools import groupby
 from cycler import cycler
 
-# def plot_byworkers(data,
-#     x_range,
-#     y_variable_description,
-#     pdf, title=None):
-
-#     times = map(lambda x: x[0], data)
-#     values = map(lambda x: x[1], data)
-
-#     fig = plt.figure()
-#     ax = fig.add_subplot(111)
-#     ax.plot(times, values, linewidth=1.0)
-#     ax.set_xlabel('Number of Workers')
-#     ax.set_ylabel(y_variable_description)
-#     if title is not None:
-#         ax.set_title(title)
-#     plt.xlim(x_range)
-#     pdf.savefig(fig)
-#     plt.close(fig)
-
-# def plot_duration_breakdown(data, series_labels, title, pdf):
-#     fig = plt.figure()
-#     ax = fig.add_subplot(111)
-#     num_workers_labels = map(lambda x: x[0], data)
-#     barl = range(len(num_workers_labels))
-#     color_cycle = ['r', 'g', 'b', 'y', 'm']
-#     bars = []
-#     for i in range(len(series_labels)):
-#         zz = map(lambda x: x[1][i], data)
-#         print barl, zz
-#         bars.append(ax.bar(barl, zz, 0.8, color=color_cycle[i]))
-#     plt.legend(map(lambda x: x[0], bars), series_labels, loc=2)
-#     plt.title(title)
-#     pdf.savefig(fig)
-#     plt.close(fig)
 
 color_sequence = ['#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c',
                   '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5',
@@ -69,6 +35,7 @@ def plot_all(data):
             ax.set_title(title)
             plt.xlim((0,64))
 
+            legend_labels = []
             for i, series in enumerate(all_series):
                 series_data = [x for x in plot_data if key_series(x) == series]
                 # print "series", series, "has length", len(series_data)
@@ -82,9 +49,11 @@ def plot_all(data):
                     else:
                         print "timing measurement not found"
                 # print "plot ", series, measured_time
-                p = ax.plot([t[0] for t in measured_time], [t[1] for t in measured_time],
-                    color=color_sequence[i], marker='o')
-            ax.legend(all_series, loc=2)
+                if measured_time:
+                    ax.plot([t[0] for t in measured_time], [t[1] for t in measured_time],
+                        color=color_sequence[i], marker='o')
+                    legend_labels.append(series)
+            ax.legend(legend_labels, loc=2)
             pdf.savefig(fig)
             plt.close(fig)
 
@@ -106,6 +75,7 @@ def plot_all(data):
                     avg_elapsed_time = timing['measure:measure:benchmark:measure']['avg_elapsed_time']
                     ref_times[config['num_inputs']] = avg_elapsed_time
 
+            legend_labels = []
             for i, series in enumerate(all_series):
                 series_data = [x for x in plot_data if key_series(x) == series]
                 # print "series", series, "has length", len(series_data)
@@ -121,9 +91,11 @@ def plot_all(data):
                     else:
                         print "timing measurement not found"
                 # print "plot ", series, measured_time
-                p = ax.plot([t[0] for t in relative_time], [t[1] for t in relative_time],
-                    color=color_sequence[i], marker='o')
-            ax.legend(all_series, loc=2)
+                if relative_time:
+                    ax.plot([t[0] for t in relative_time], [t[1] for t in relative_time],
+                        color=color_sequence[i], marker='o')
+                    legend_labels.append(series)
+            ax.legend(legend_labels, loc=2)
             pdf.savefig(fig)
             plt.close(fig)
 
