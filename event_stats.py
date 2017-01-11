@@ -4,6 +4,7 @@ import gzip
 from collections import defaultdict
 from math import sqrt
 import time
+import socket
 
 from ray.worker import RayLogSpan
 
@@ -131,7 +132,7 @@ def get_worker_ips(r):
     worker_ips = {}
     for worker_key in r.keys("Workers:*"):
         node_ip_address = r.hget(worker_key, 'node_ip_address')
-        worker_id = bytestohex(worker_key[9:29])
+        worker_id = bytestohex(worker_key[8:29])
         worker_ips[worker_id] = node_ip_address
     return worker_ips
 
@@ -145,6 +146,8 @@ def read_stats(redis_address):
     r = redis.StrictRedis(host, port)
 
     worker_ips = get_worker_ips(r)
+    worker_ips['DRIVER'] = socket.gethostbyname(socket.gethostname())
+
 
     all_events = [build_event(key, event_data) for key in r.keys('event*') for lrange in r.lrange(key, 0, -1) for event_data in json.loads(lrange)]
     all_events.sort(key=lambda x: x['timestamp'])
