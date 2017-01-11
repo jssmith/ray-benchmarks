@@ -49,10 +49,11 @@ class BasicStatistics(object):
 def bytestohex(key):
     return ''.join([c.encode('hex') for c in key])
 
-def build_event(key, value):
+def build_event(key, value, worker_ips):
     (timestamp, event_type, status, extras) = value
     return {
         'worker_id' : bytestohex(key[10:30]),
+        'worker_ip' : worker_ips[worker_id],
         'task_id' : bytestohex(key[31:51]),
         'timestamp' : timestamp,
         'event_type' : event_type,
@@ -125,6 +126,16 @@ def benchmark_init():
 def benchmark_measure():
     return RayLogSpan('benchmark:measure')
 
+def get_worker_ips():
+    r = redis.StrictRedis("127.0.0.1", 12997)
+    worker_ips = {}
+    for worker_key in r.keys("Workers:*"):
+        node_ip_address = r.hget(worker_key, 'node_ip_address')
+        worker_id = bytestohex(worker_key[9:29])
+        worker_ips[worker_id] = node_ip_address
+    return worker_ips
+
+
 def read_stats(redis_address):
     # sleep briefly to allow driver writes to redis to propagate
     time.sleep(2)
@@ -132,7 +143,10 @@ def read_stats(redis_address):
     (host, port) = redis_address.split(':')
     port = int(port)
     r = redis.StrictRedis(host, port)
-    all_events = [build_event(key, event_data) for key in r.keys('event*') for lrange in r.lrange(key, 0, -1) for event_data in json.loads(lrange)]
+
+    worker_ips = get_worker_ips()
+
+    all_events = [build_event(key, event_data, worker_ips) for key in r.keys('event*') for lrange in r.lrange(key, 0, -1) for event_data in json.loads(lrange)]
     all_events.sort(key=lambda x: x['timestamp'])
     with gzip.open("events.json.gz", "w") as f:
         json.dump(all_events, f)
