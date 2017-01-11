@@ -61,7 +61,9 @@ def plot_worker_activity(data, title, pdf):
 
     active_ranges_benchmark = defaultdict(list)
 
+    first_benchmark_time = None
     for worker in workers:
+        print "worker is", worker
         last_started = {}
         for (timestamp, (task_id, event_type, status)) in data[worker]:
             if event_type.startswith('benchmark:'):
@@ -71,6 +73,8 @@ def plot_worker_activity(data, title, pdf):
                 elif status == 'end':
                     active_ranges_benchmark[event_type].append((last_started[event_type], timestamp - last_started[event_type]))
                     del last_started[event_type]
+                if first_benchmark_time is None or first_benchmark_time < timestamp:
+                    first_benchmark_time = timestamp
     if not active_ranges_benchmark['benchmark:measure']:
         print "no benchmark interval measurement found"
     plt.broken_barh(active_ranges_benchmark['benchmark:measure'], (0, len(workers)), color='#ffcce6')
@@ -119,7 +123,7 @@ def plot_worker_activity(data, title, pdf):
     ax.set_yticklabels(map(lambda x: str(x)[:8], workers))
     
     ax.set_xlabel('Time [seconds]')
-    ax.set_xlim(0, max_timestamp)
+    ax.set_xlim(first_benchmark_time, max_timestamp)
 
     ax.set_title(title)
 

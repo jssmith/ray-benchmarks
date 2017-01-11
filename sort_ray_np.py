@@ -1,3 +1,4 @@
+import os
 import sys
 import random
 import numpy as np
@@ -93,7 +94,10 @@ if __name__ == '__main__':
     num_workers = int(sys.argv[1])
     num_splits = int(sys.argv[2])
     input_files = sys.argv[3:]
-    address_info = ray.init(start_ray_local=True, num_workers=num_workers)
+    if 'REDIS_ADDRESS' in os.environ:
+        address_info = ray.init(redis_address=os.environ['REDIS_ADDRESS'])
+    else:
+        address_info = ray.init(start_ray_local=True, num_workers=num_workers)
     for _ in range(sweep_iterations):
         benchmark_sort(num_splits, input_files)
     ray.flush_log()

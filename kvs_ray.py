@@ -1,4 +1,5 @@
 import ray
+import os
 import sys
 import hashlib
 import random
@@ -119,7 +120,10 @@ if __name__ == '__main__':
         print 'require num_workers >= 2* num_splits'
         sys.exit(1)
     input_files = sys.argv[3:]
-    address_info = ray.init(start_ray_local=True, num_workers=num_workers)
+    if 'REDIS_ADDRESS' in os.environ:
+        address_info = ray.init(redis_address=os.environ['REDIS_ADDRESS'])
+    else:
+        address_info = ray.init(start_ray_local=True, num_workers=num_workers)
     for _ in range(sweep_iterations):
         benchmark_kvs(num_splits, input_files)
     ray.flush_log()
