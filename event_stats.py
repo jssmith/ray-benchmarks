@@ -53,9 +53,13 @@ def build_event(key, value, worker_ips):
     (timestamp, event_type, status, extras) = value
     worker_id = bytestohex(key[10:30])
     task_id = bytestohex(key[31:51])
+    if worker_id in worker_ips:
+        worker_ip = worker_ips[worker_id]
+    else:
+        worker_ip = 'UNKNOWN'
     return {
         'worker_id' : worker_id,
-        'worker_ip' : worker_ips[worker_id],
+        'worker_ip' : worker_ip,
         'task_id' : task_id,
         'timestamp' : timestamp,
         'event_type' : event_type,
