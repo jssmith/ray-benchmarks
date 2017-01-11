@@ -13,7 +13,7 @@ def get_ips(num_nodes):
     if len(all_ips) < num_nodes:
         raise RuntimeError("not enough nodes available")
     master_ip = all_ips[0]
-    other_ips = all_ips[1:(num_nodes - 1)]
+    other_ips = all_ips[1:num_nodes]
     return master_ip, other_ips
 
 def pssh_command(hosts, command):

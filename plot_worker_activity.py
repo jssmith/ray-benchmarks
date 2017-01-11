@@ -88,7 +88,8 @@ def plot_worker_activity(data, worker_ips, title, pdf):
                     first_benchmark_end = timestamp
     if not active_ranges_benchmark['benchmark:measure']:
         print "no benchmark interval measurement found"
-    plt.broken_barh(active_ranges_benchmark['benchmark:measure'], (0, len(workers)), color='#ffcce6')
+
+    plt.broken_barh(map(lambda (x,y): (x - first_benchmark_start, y), active_ranges_benchmark['benchmark:measure']), (0, len(workers)), color='#ffcce6')
 
 
     plot_bars = [
@@ -117,7 +118,7 @@ def plot_worker_activity(data, worker_ips, title, pdf):
             if status == 'start':
                 last_started[event_type] = timestamp
             elif status == 'end':
-                active_ranges[event_type].append((last_started[event_type], timestamp - last_started[event_type]))
+                active_ranges[event_type].append((last_started[event_type] - first_benchmark_start, timestamp - last_started[event_type]))
                 del last_started[event_type]
         for event_type, color in plot_bars:
             plt.broken_barh(active_ranges[event_type], (baseline, width), color=color)
@@ -134,7 +135,7 @@ def plot_worker_activity(data, worker_ips, title, pdf):
     ax.set_yticklabels(map(worker_name, workers))
     
     ax.set_xlabel('Time [seconds]')
-    ax.set_xlim(first_benchmark_start, first_benchmark_end)
+    ax.set_xlim(0, first_benchmark_end - first_benchmark_start)
 
     ax.set_title(title)
 

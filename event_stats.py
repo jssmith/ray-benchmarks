@@ -1,5 +1,6 @@
 import redis
 import json
+import sys
 import gzip
 from collections import defaultdict
 from math import sqrt
@@ -206,3 +207,16 @@ def print_stats_summary_noray(config_info):
         a.add_event(event)
     stats['timing'] = a.summary_stats()
     print "BENCHMARK_STATS:", json.dumps(stats)
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print "Usage: event_stats.py input.json.gz [input.json.gz ...]"
+        sys.exit(1)
+    input_files = sys.argv[1:]
+    for input_file in input_files:
+        with gzip.open(input_file) as f:
+            dump = json.load(f)
+        a = Analysis()
+        [a.add_event(e) for e in dump['events']]
+        ss = a.summary_stats()
+        print ss['measure:measure:benchmark:measure']['avg_elapsed_time']
