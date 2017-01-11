@@ -1,3 +1,4 @@
+import os
 import sys
 import re
 
@@ -92,7 +93,10 @@ if __name__ == '__main__':
     input_files = sys.argv[3:]
     ray.register_class(type(dict_merge.remote), pickle=True)
     print "starting Ray with {} workers".format(num_workers)
-    address_info = ray.init(start_ray_local=True, num_workers=num_workers)
+    if 'REDIS_ADDRESS' in os.environ:
+        address_info = ray.init(redis_address=os.environ['REDIS_ADDRESS'])
+    else:
+        address_info = ray.init(start_ray_local=True, num_workers=num_workers)
     for _ in range(sweep_iterations):
         do_wc(num_workers, num_splits, input_files)
     ray.flush_log()
