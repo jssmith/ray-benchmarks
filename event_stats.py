@@ -51,10 +51,12 @@ def bytestohex(key):
 
 def build_event(key, value, worker_ips):
     (timestamp, event_type, status, extras) = value
+    worker_id = bytestohex(key[10:30])
+    task_id = bytestohex(key[31:51])
     return {
-        'worker_id' : bytestohex(key[10:30]),
+        'worker_id' : worker_id,
         'worker_ip' : worker_ips[worker_id],
-        'task_id' : bytestohex(key[31:51]),
+        'task_id' : task_id,
         'timestamp' : timestamp,
         'event_type' : event_type,
         'status' : status,
