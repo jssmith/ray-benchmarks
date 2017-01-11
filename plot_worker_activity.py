@@ -47,8 +47,14 @@ class DistributionStats(object):
         stats['worker_activity'] = self._worker_activity.state_log
         return stats
 
-def plot_worker_activity(data, title, pdf):
-    workers = sorted(data.keys())
+def plot_worker_activity(data, worker_ips, title, pdf):
+    def worker_name(worker):
+        if worker in worker_ips:
+            return worker_ips[worker] + ":" + worker[:8]
+        else:
+            return worker_ips['DRIVER'] + ":" + worker[:8]
+
+    workers = sorted(data.keys(), key=worker_name)
 
     width = .8
     padding = .2
@@ -61,7 +67,8 @@ def plot_worker_activity(data, title, pdf):
 
     active_ranges_benchmark = defaultdict(list)
 
-    first_benchmark_time = None
+    first_benchmark_start = None
+    first_benchmark_end = None
     for worker in workers:
         print "worker is", worker
         last_started = {}
@@ -73,8 +80,12 @@ def plot_worker_activity(data, title, pdf):
                 elif status == 'end':
                     active_ranges_benchmark[event_type].append((last_started[event_type], timestamp - last_started[event_type]))
                     del last_started[event_type]
-                if first_benchmark_time is None or first_benchmark_time < timestamp:
-                    first_benchmark_time = timestamp
+            if event_type.startswith('benchmark:measure') and status == 'start':
+                if first_benchmark_start is None or first_benchmark_start < timestamp:
+                    first_benchmark_start = timestamp
+            if event_type.startswith('benchmark:measure') and status == 'end':
+                if first_benchmark_end is None or first_benchmark_end < timestamp:
+                    first_benchmark_end = timestamp
     if not active_ranges_benchmark['benchmark:measure']:
         print "no benchmark interval measurement found"
     plt.broken_barh(active_ranges_benchmark['benchmark:measure'], (0, len(workers)), color='#ffcce6')
@@ -120,10 +131,10 @@ def plot_worker_activity(data, title, pdf):
     ax.set_ylabel('Worker ID')
     ax.set_yticks(list(0.5 + x for x in range(len(workers))))
     ax.set_ylim(0, len(workers))
-    ax.set_yticklabels(map(lambda x: str(x)[:8], workers))
+    ax.set_yticklabels(map(worker_name, workers))
     
     ax.set_xlabel('Time [seconds]')
-    ax.set_xlim(first_benchmark_time, max_timestamp)
+    ax.set_xlim(first_benchmark_start, first_benchmark_end)
 
     ax.set_title(title)
 
@@ -145,11 +156,11 @@ if __name__ == '__main__':
     input_file = sys.argv[1]
     output_filename = sys.argv[2]
     with gzip.open(input_file) as f:
-        all_events = json.load(f)
+        dump = json.load(f)
     ds = DistributionStats()
-    for e in all_events:
+    for e in dump['events']:
         ds.add_event(e)
     stats = ds.get_stats()
 
     with PdfPages(output_filename) as pdf:
-        plot_worker_activity(stats['worker_activity'], get_title(input_file), pdf)
+        plot_worker_activity(stats['worker_activity'], dump['worker_ips'], get_title(input_file), pdf)
