@@ -49,17 +49,12 @@ class BasicStatistics(object):
 def bytestohex(key):
     return ''.join([c.encode('hex') for c in key])
 
-def build_event(key, value, worker_ips):
+def build_event(key, value):
     (timestamp, event_type, status, extras) = value
     worker_id = bytestohex(key[10:30])
     task_id = bytestohex(key[31:51])
-    if worker_id in worker_ips:
-        worker_ip = worker_ips[worker_id]
-    else:
-        worker_ip = 'UNKNOWN'
     return {
         'worker_id' : worker_id,
-        'worker_ip' : worker_ip,
         'task_id' : task_id,
         'timestamp' : timestamp,
         'event_type' : event_type,
@@ -151,10 +146,14 @@ def read_stats(redis_address):
 
     worker_ips = get_worker_ips(r)
 
-    all_events = [build_event(key, event_data, worker_ips) for key in r.keys('event*') for lrange in r.lrange(key, 0, -1) for event_data in json.loads(lrange)]
+    all_events = [build_event(key, event_data) for key in r.keys('event*') for lrange in r.lrange(key, 0, -1) for event_data in json.loads(lrange)]
     all_events.sort(key=lambda x: x['timestamp'])
+    dump = {
+        'events' : all_events,
+        'worker_ips' : worker_ips
+    }
     with gzip.open("events.json.gz", "w") as f:
-        json.dump(all_events, f)
+        json.dump(dump, f)
     print "number of events is", len(all_events)
     a = Analysis()
     for event in all_events:
