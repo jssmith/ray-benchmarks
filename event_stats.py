@@ -126,8 +126,7 @@ def benchmark_init():
 def benchmark_measure():
     return RayLogSpan('benchmark:measure')
 
-def get_worker_ips():
-    r = redis.StrictRedis("127.0.0.1", 12997)
+def get_worker_ips(r):
     worker_ips = {}
     for worker_key in r.keys("Workers:*"):
         node_ip_address = r.hget(worker_key, 'node_ip_address')
@@ -144,7 +143,7 @@ def read_stats(redis_address):
     port = int(port)
     r = redis.StrictRedis(host, port)
 
-    worker_ips = get_worker_ips()
+    worker_ips = get_worker_ips(r)
 
     all_events = [build_event(key, event_data, worker_ips) for key in r.keys('event*') for lrange in r.lrange(key, 0, -1) for event_data in json.loads(lrange)]
     all_events.sort(key=lambda x: x['timestamp'])
