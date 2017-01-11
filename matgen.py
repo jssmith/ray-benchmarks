@@ -18,14 +18,13 @@ def mat_gen(filename, dim):
     print "generating {}x{} matrix {}".format(dim, dim, filename)
 
 if __name__ == '__main__':
-    if len(sys.argv) != 6:
-        print "Usage: matgen.py num_workers dim_blocks dim_size file_prefix"
+    if len(sys.argv) != 5:
+        print "Usage: matgen.py num_workers dim_size dim_blocks file_prefix"
         sys.exit(1)
     num_workers = int(sys.argv[1])
-    num_splits = int(sys.argv[2])
+    dim_size = int(sys.argv[2])
     dim_blocks = int(sys.argv[3])
-    dim_size = int(sys.argv[4])
-    file_prefix = sys.argv[5]
+    file_prefix = sys.argv[4]
     ray.init(start_ray_local=True, num_workers=num_workers)
     if dim_size % dim_blocks != 0:
         print "dimension size must be multiple of dimension blocks"

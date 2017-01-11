@@ -88,6 +88,35 @@ NUM_SPLITS=6
 python kvs_ray.py $NUM_WORKERS $NUM_SPLITS sort_test*)
 ```
 
+## Matrix Multiplication
+
+### Generate data files
+
+Parameters are as follows:
+- `num workers` - how many worker processes Ray is to launch.
+- `dim size` - dimension of the matrix
+- `dim blocks` - how many block splits among each dimension
+- `file prefix` - prefix for matrix file blocks.
+
+```
+(NUM_WORKERS=4
+DIM_SIZE=16000
+DIM_BLOCKS=8
+python matgen.py $NUM_WORKERS $DIM_SIZE $DIM_BLOCKS mat_16k_8)
+```
+
+The program generates data files filled with random numbers.
+
+### Matrix multiplication
+
+The benchmark program initializes two separate matrices `A` and `B`, both using the same values loaded from the input files. It then computes `C` = `A` * `B`.
+
+```
+(NUM_WORKERS=9
+NUM_SPLITS=3
+python matmul_ray.py $NUM_WORKERS $NUM_SPLITS mat_16k_8)
+```
+
 # Ray Benchmark Parameter Sweeps
 
 Parameters are as follows:
