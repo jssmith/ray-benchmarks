@@ -46,10 +46,12 @@ if __name__ == '__main__':
     num_workers = int(sys.argv[1])
     num_splits = int(sys.argv[2])
     input_prefix = sys.argv[3]
-    print "starting Ray with {} workers".format(num_workers)
     if 'REDIS_ADDRESS' in os.environ:
-        address_info = ray.init(redis_address=os.environ['REDIS_ADDRESS'])
+        redis_address = os.environ['REDIS_ADDRESS']
+        print "using Ray with Redis at {}".format(redis_address)
+        address_info = ray.init(redis_address=redis_address)
     else:
+        print "starting Ray with {} workers".format(num_workers)
         address_info = ray.init(start_ray_local=True, num_workers=num_workers)
     for _ in range(sweep_iterations):
         benchmark_matmul(input_prefix, num_splits)
