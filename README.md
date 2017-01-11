@@ -1,6 +1,10 @@
 # Ray Benchmarks
 
+The Ray Benchmarks are simple examples designed to test basic algorithms in a distributed setting.
+
 ## Word Count
+
+The word count benchmark counts the frequency of each word in a set of input documents.
 
 ### Generate data files
 
@@ -21,6 +25,8 @@ NUM_WORDS=6400000
 FILE_PREFIX=wc_test
 python wcgen.py $NUM_WORKERS $NUM_SPLITS $NUM_WORDS $FILE_PREFIX)
 ```
+
+This generates 64 files each containing 100,000 words.
 
 ### Counting words
 
@@ -51,12 +57,14 @@ Parameters are as follows:
 
 ```
 (NUM_WORKERS=4
-NUM_RECORDS=1000000
-NUM_SPLITS=25
-FILE_PREFIX=sort_test
+NUM_RECORDS=64000000
+NUM_SPLITS=64
+FILE_PREFIX=sort_test_1m
 FILE_FORMAT=numpy
 python teragen.py $NUM_WORKERS $NUM_SPLITS $NUM_RECORDS $FILE_PREFIX $FILE_FORMAT)
 ```
+
+This generates 64 files each containing 1 million 100-byte records to be sorted.
 
 ### Run the benchmark
 
@@ -69,8 +77,10 @@ Parameters are as follows:
 ```
 (NUM_WORKERS=6
 NUM_SPLITS=6
-python sort_ray.py $NUM_WORKERS $NUM_SPLITS sort_test*)
+python sort_ray_np.py $NUM_WORKERS $NUM_SPLITS sort_test*)
 ```
+
+We use Numpy for storing the text to sort as this allows for faster loading of text from files, and for faster transfers between Ray processes and the object store. The implementation proceeds by first sampling each input file to obtain an estimate of the distribution of keys. Using the estimate of the distribution of keys it sorts inputs and distributes them to approximately equal-size output partitions. Imbalanced output partitions degrade job completion time, so it is important to sample adequately (we use 1,000 samples per split). 
 
 ## Key-Value Store
 
@@ -87,6 +97,8 @@ Parameters are as follows:
 NUM_SPLITS=6
 python kvs_ray.py $NUM_WORKERS $NUM_SPLITS sort_test*)
 ```
+
+This implementation challenges Ray with indexing a large number of 100-byte objects. As implemented this test exercises Ray's ability to retrieve a python dict, as well as the task dispatch speed.
 
 ## Matrix Multiplication
 
@@ -105,7 +117,7 @@ DIM_BLOCKS=8
 python matgen.py $NUM_WORKERS $DIM_SIZE $DIM_BLOCKS mat_16k_8)
 ```
 
-The program generates data files filled with random numbers.
+The program generates data files filled with random numbers. For the parameters provided here each block is 2,000 x 2,000 entries in size and the matrix is 8 x 8 blocks in size.
 
 ### Matrix multiplication
 
