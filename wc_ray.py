@@ -1,32 +1,36 @@
 import os
 import sys
 import re
-
 import ray
-import wc as wclib
+import numpy as np
 
 from collections import defaultdict
 
-from utils import Timer, chunks
-from sweep import sweep_iterations
 import event_stats
 
-def usage():
-    print "Usage: wc_ray num_workers num_splits inputfile [inputfile ...]"
+@ray.remote
+def wc_gen(source_text, start_index, end_index):
+    print "generating {} words on range {} - {}".format(end_index - start_index, start_index, end_index)
+    np.random.seed((start_index * 71741 + end_index) % 4294967296)
+    words = []
+    for line in source_text.split("\n"):
+        line = re.sub(r"[^a-zA-Z']", " ", line)
+        line = re.sub(r"  +", " ", line)
+        line = line.strip()
+        words += [word for word in line.split(' ')]
+    return " ".join([words[np.random.randint(len(words))] for _ in range(start_index, end_index)])
+
 
 @ray.remote
-def wc(input_files):
-    return wclib.wc(input_files)
-
-@ray.remote
-def tree_reduce(fn, data):
-    if len(data) == 1:
-        return data[0]
-    elif len(data) == 2:
-        return fn(data[0], data[1])
-    else:
-        mid = len(data)/2
-        return fn(ray.get(tree_reduce.remote(fn, data[:mid])), ray.get(tree_reduce.remote(fn, data[mid:])))
+def wc(input_splits):
+    word_counters = defaultdict(lambda: 0)
+    for input_split in input_splits:
+        text = ray.get(input_split)
+        text = re.sub(r"[^a-zA-Z]", " ", text)
+        text = re.sub(r"  +", " ", text)
+        for word in filter(lambda x: len(x) > 0, map(lambda x: x.lower(), text.split(' '))):
+            word_counters[word] += 1
+    return word_counters
 
 
 @ray.remote
@@ -39,17 +43,7 @@ def tree_reduce_remote(fn, data):
         mid = len(data)/2
         return ray.get(fn.remote(tree_reduce_remote.remote(fn, data[:mid]), tree_reduce_remote.remote(fn, data[mid:])))
 
-@ray.remote
-def tree_reduce_merge(data):
-    if len(data) == 1:
-        return data[0]
-    elif len(data) == 2:
-        return dict_merge.remote(data[0], data[1])
-    else:
-        mid = len(data)/2
-        return dict_merge.remote(tree_reduce_merge.remote(data[:mid]), tree_reduce_merge.remote(data[mid:]))
 
-# variable to test: how many to merge at once
 @ray.remote
 def dict_merge(x, y):
     print "merge dict of length {} and of length {}".format(len(x), len(y))
@@ -64,14 +58,21 @@ def dict_merge(x, y):
         res[key] = key_sum
     return res
 
-def do_wc(num_workers, num_splits, input_files):
+def init_wc(num_splits, words_per_split):
+    with open('lear.txt', 'r') as f:
+        source_text = f.read()
+    with event_stats.benchmark_init():
+        gen_jobs = list([wc_gen.remote(source_text, i, i + words_per_split) for i in range(0, num_splits * words_per_split, words_per_split)])
+        ray.wait(gen_jobs, num_returns=num_splits)
+        return gen_jobs
+
+
+def do_wc(input_splits):
     with event_stats.benchmark_measure():
-        results = [wc.remote(input_file) for input_file in chunks(input_files, num_splits)]
+        results = [wc.remote(input_split) for input_split in input_splits]
         print "number of results is {}".format(len(results))
-        #res = reduce(dict_merge.remote, results)
         res = tree_reduce_remote.remote(dict_merge, results)
 
-        # block and wait for all to finish
         ray.wait([res])
 
         # find most common word
@@ -83,30 +84,26 @@ def do_wc(num_workers, num_splits, input_files):
                 most_popular_ct = ct
         print "most popular word is '{}' with count {}".format(most_popular_word, most_popular_ct)
 
+def chunks(l, n):
+    chunk_size = (len(l) - 1) / n + 1
+    for i in xrange(0, len(l), chunk_size):
+        yield l[i:i + chunk_size]
 
 if __name__ == '__main__':
-    if len(sys.argv) < 4:
-        usage()
-        sys.exit(1)
-    num_workers = int(sys.argv[1])
-    num_splits = int(sys.argv[2])
-    input_files = sys.argv[3:]
-    ray.register_class(type(dict_merge.remote), pickle=True)
-    print "starting Ray with {} workers".format(num_workers)
-    if 'REDIS_ADDRESS' in os.environ:
-        address_info = ray.init(redis_address=os.environ['REDIS_ADDRESS'])
+    if "RAY_NUM_WORKERS" in os.environ:
+        num_workers = int(os.environ["RAY_NUM_WORKERS"])
     else:
+        num_workers = 4
+    num_splits = 2 * num_workers
+    ray.register_class(type(dict_merge.remote), pickle=True)
+    if 'RAY_REDIS_ADDRESS' in os.environ:
+        address_info = ray.init(redis_address=os.environ['RAY_REDIS_ADDRESS'])
+    else:
+        print "No Redis address - starting locally"
         address_info = ray.init(start_ray_local=True, num_workers=num_workers)
-    for _ in range(sweep_iterations):
-        do_wc(num_workers, num_splits, input_files)
+
+    input_splits = init_wc(num_splits, 100000)
+    print "number of splits", len(input_splits)
+    do_wc(chunks(input_splits, num_workers))
+
     ray.flush_log()
-    config_info = {
-        'benchmark_name' : 'wc',
-        'benchmark_implementation' : 'ray',
-        'benchmark_iterations' : sweep_iterations,
-        'num_workers' : num_workers,
-        'num_splits' : num_splits,
-        'input_file_base' : input_files[0],
-        'num_inputs' : len(input_files)
-    }
-    event_stats.print_stats_summary(config_info, address_info['redis_address'])
