@@ -2,14 +2,12 @@ import sys
 import os
 import ray
 import numpy as np
-from utils import Timer, init_np_env
-from sweep import sweep_iterations
-from matgen import filename_format_str
-import event_stats
+
 from math import sqrt, ceil
 
-def usage():
-    print "Usage: matmul_ray.py num_workers num_splits input_prefix"
+from raybench import benchmark_init, benchmark_measure
+from raybench.utils import Timer, init_np_env
+
 
 @ray.remote
 def mat_gen_block(i, j, dim):
@@ -20,7 +18,7 @@ def mat_gen_block(i, j, dim):
     return m
 
 def mat_gen(block_size, dim_blocks):
-    with event_stats.benchmark_init():
+    with benchmark_init():
         matrix_blocks = [[mat_gen_block.remote(bi, bj, block_size) for bj in range(dim_blocks)] for bi in range(dim_blocks)]
         for job_list in matrix_blocks:
             for job in job_list:
@@ -43,7 +41,7 @@ def benchmark_matmul(blocks, dim_blocks):
         b = [blocks[k][j] for k in range(dim_blocks)]
         return mult_dim.remote(a, b)
 
-    with event_stats.benchmark_measure():
+    with benchmark_measure():
         res = [[mult_block(i, j) for j in range(dim_blocks)] for i in range(dim_blocks)]
         [ray.wait([res[i][j]]) for i in range(dim_blocks) for j in range (dim_blocks)]
 

@@ -6,7 +6,7 @@ import numpy as np
 
 from collections import defaultdict
 
-import event_stats
+from raybench import benchmark_init, benchmark_measure
 
 @ray.remote
 def wc_gen(source_text, start_index, end_index):
@@ -61,14 +61,14 @@ def dict_merge(x, y):
 def init_wc(num_splits, words_per_split):
     with open('lear.txt', 'r') as f:
         source_text = f.read()
-    with event_stats.benchmark_init():
+    with benchmark_init():
         gen_jobs = list([wc_gen.remote(source_text, i, i + words_per_split) for i in range(0, num_splits * words_per_split, words_per_split)])
         ray.wait(gen_jobs, num_returns=num_splits)
         return gen_jobs
 
 
 def do_wc(input_splits):
-    with event_stats.benchmark_measure():
+    with benchmark_measure():
         results = [wc.remote(input_split) for input_split in input_splits]
         print "number of results is {}".format(len(results))
         res = tree_reduce_remote.remote(dict_merge, results)
