@@ -1,6 +1,9 @@
 import argparse
+import base64
 import json
 import os
+
+from stats import save_ray_events
 
 if 'RAY_REDIS_ADDRESS' in os.environ:
     redis_address = os.environ['RAY_REDIS_ADDRESS']
