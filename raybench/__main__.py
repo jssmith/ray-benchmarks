@@ -15,6 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", required=True, help="output directory")
     parser.add_argument("--sweep-workers-arithmetic", help="sweep arithmetic: start:end:step")
     parser.add_argument("--workers-per-node", type=int, default=4, help="number of workers per node")
+    parser.add_argument("--hosts", required=True, help="file containing host ip addresses")
     # parser.add_argument("--local", help="run locally")
     args = parser.parse_args()
 
@@ -36,7 +37,7 @@ if __name__ == "__main__":
     else:
         raise RuntimeError("sweep not found")
 
-    (master_ip, other_ips) = raybench.get_ips()
+    (master_ip, other_ips) = raybench.get_ips(args.hosts)
     print master_ip, other_ips
     cc = raybench.ClusterControl(master_ip, other_ips)
     num_workers_per_node = args.workers_per_node

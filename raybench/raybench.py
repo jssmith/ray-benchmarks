@@ -33,13 +33,13 @@ class ClusterControl(object):
 
     def run_benchmark(self, benchmark_script, config):
         # TODO put benchmark script in the right place on the destination host
-        self._scp_upload(self.master_node, [ "event_stats.py", "lear.txt", "benchmarkstats.py", benchmark_script])
+        self._scp_upload(self.master_node, ["lear.txt", benchmark_script])
 
         benchmark_command = "export PATH=/home/ubuntu/anaconda2/bin/:$PATH && source activate raydev && export RAY_REDIS_ADDRESS={} && export RAY_NUM_WORKERS={} && python {}".format(self.redis_address, self.num_workers_started, benchmark_script)
         self._pssh_command(self.master_node, benchmark_command)
 
         config_str = base64.b64encode(json.dumps(config))
-        benchmark_stats_command = "export PATH=/home/ubuntu/anaconda2/bin/:$PATH && source activate raydev && export RAY_REDIS_ADDRESS={} && python benchmarkstats.py --config=\"{}\"".format(self.redis_address, config_str)
+        benchmark_stats_command = "export PATH=/home/ubuntu/anaconda2/bin/:$PATH && source activate raydev && export RAY_REDIS_ADDRESS={} && python -m raybench.stats --config=\"{}\"".format(self.redis_address, config_str)
         self._pssh_command(self.master_node, benchmark_stats_command)
 
     def download_stats(self, filename):
@@ -102,12 +102,12 @@ class ClusterControl(object):
         stdout, stderr = self._pssh_command(hosts, script)
 
 
-def get_all_ips():
-    with open("host_ips.txt") as f:
+def get_all_ips(hosts_file):
+    with open(hosts_file) as f:
         return list([line.strip() for line in f.readlines()])
 
-def get_ips(num_nodes=None):
-    ips = get_all_ips()
+def get_ips(hosts_file, num_nodes=None):
+    ips = get_all_ips(hosts_file)
     master_ip = ips[0]
     if num_nodes is not None:
         if len(all_ips) < num_nodes:
