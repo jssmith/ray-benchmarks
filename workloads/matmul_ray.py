@@ -55,7 +55,7 @@ if __name__ == '__main__':
         address_info = ray.init(redis_address=os.environ['RAY_REDIS_ADDRESS'])
     else:
         print "No Redis address - starting locally"
-        address_info = ray.init(start_ray_local=True, num_workers=num_workers)
+        address_info = ray.init(num_workers=num_workers)
 
     matrix = mat_gen(2000, num_splits)
     benchmark_matmul(matrix, num_splits)

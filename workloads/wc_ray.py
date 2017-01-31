@@ -100,7 +100,7 @@ if __name__ == '__main__':
         address_info = ray.init(redis_address=os.environ['RAY_REDIS_ADDRESS'])
     else:
         print "No Redis address - starting locally"
-        address_info = ray.init(start_ray_local=True, num_workers=num_workers)
+        address_info = ray.init(num_workers=num_workers)
 
     input_splits = init_wc(num_splits, 100000)
     print "number of splits", len(input_splits)
