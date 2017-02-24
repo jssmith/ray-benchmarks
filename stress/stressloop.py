@@ -1,13 +1,23 @@
 import argparse
 import json
 import re
+import sys
 import time
 
 from subprocess import Popen, PIPE
 
 class Logger(object):
     def __init__(self, fn):
-        self.f = open(fn, "a")
+        if fn:
+            self.f = open(fn, "a")
+        else:
+            self.f = sys.stdout
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
 
     def close(self):
         self.f.close()
@@ -24,6 +34,7 @@ class Logger(object):
     def log_txt(self, msg_txt):
         self.f.write(msg_txt + "\n")
         self.f.flush()
+
 
 class StressRay(object):
 
@@ -85,8 +96,11 @@ class StressRay(object):
         proc = Popen(["docker", "kill", self.container_id], stdout=PIPE)
         (stdoutdata, stderrdata) = proc.communicate()
         stopped_container_id = self._get_container_id(stdoutdata)
-        if not stopped_container_id or self.container_id != stopped_container_id:
-            raise RuntimeError("Failed to stop container {}".format(self.container_id))
+        stop_successful = self.container_id == stopped_container_id
+        self.logger.log("stop_ray", {
+            "head_container_id" : self.container_id,
+            "success" : stop_successful
+            })
 
     def _do_iteration(self, workload_script, iteration_state):
         i = iteration_state.iteration_index
@@ -101,6 +115,7 @@ class StressRay(object):
         self.logger.log("finish_work", {
                 "iteration" : i,
                 "head_container_id" : self.container_id,
+                "workload_script" : workload_script,
                 "elapsed_time" : elapsed_time,
                 "success" : success
             })
@@ -140,14 +155,20 @@ class StressRay(object):
         else:
             loop_predicate = lambda: loop_predicate_time() and loop_predicate_iteration()
 
+
+        logger.log("start_iterations", {
+            "workload_script" : workload_script,
+            "head_container_id" : self.container_id,
+            "iteration_target" : iteration_target,
+            "time_target" : time_target
+            })
         while loop_predicate():
             if not self._do_iteration(workload_script, iteration_state):
                 break
         iteration_state.iteration_end_time = time.time()
 
-        logger.log("finish_iteration", {
+        logger.log("finish_iterations", {
             "workload_script" : workload_script,
-            "excessive_failures" : iteration_state.excessive_failures,
             "num_successes" : iteration_state.num_successes,
             "num_failures" : iteration_state.num_failures,
             "elapsed_time" : iteration_state.iteration_end_time - iteration_state.iteration_start_time,
@@ -161,15 +182,16 @@ if __name__ == "__main__":
     parser.add_argument("--num-workers", default="4", help="number of workers")
     parser.add_argument("--time-target", type=int, help="time target in seconds")
     parser.add_argument("--iteration-target", type=int, help="iteration target in seconds")
+    parser.add_argument("--log", help="event log file")
     args = parser.parse_args()
 
-    logger = Logger("log.txt")
-    s = StressRay(logger)
-    container_id = s.start_ray(shm_size=args.shm_size, num_workers=args.num_workers)
+    with Logger(args.log) as logger:
+        s = StressRay(logger)
+        container_id = s.start_ray(shm_size=args.shm_size, num_workers=args.num_workers)
 
-    # sleep a little bit to give Ray time to start
-    time.sleep(2)
+        # sleep a little bit to give Ray time to start
+        time.sleep(2)
 
-    s.iterate_workload(args.workload, iteration_target=args.iteration_target, time_target=args.time_target)
+        s.iterate_workload(args.workload, iteration_target=args.iteration_target, time_target=args.time_target)
 
-    s.stop_ray()
+        s.stop_ray()
