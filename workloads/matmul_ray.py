@@ -5,7 +5,7 @@ import numpy as np
 
 from math import sqrt, ceil
 
-from raybench import benchmark_init, benchmark_measure
+import raybench
 from raybench.utils import Timer, init_np_env
 
 
@@ -18,7 +18,7 @@ def mat_gen_block(i, j, dim):
     return m
 
 def mat_gen(block_size, dim_blocks):
-    with benchmark_init():
+    with raybench.init():
         matrix_blocks = [[mat_gen_block.remote(bi, bj, block_size) for bj in range(dim_blocks)] for bi in range(dim_blocks)]
         for job_list in matrix_blocks:
             for job in job_list:
@@ -41,21 +41,14 @@ def benchmark_matmul(blocks, dim_blocks):
         b = [blocks[k][j] for k in range(dim_blocks)]
         return mult_dim.remote(a, b)
 
-    with benchmark_measure():
+    with raybench.measure():
         res = [[mult_block(i, j) for j in range(dim_blocks)] for i in range(dim_blocks)]
         [ray.wait([res[i][j]]) for i in range(dim_blocks) for j in range (dim_blocks)]
 
 if __name__ == '__main__':
-    if "RAY_NUM_WORKERS" in os.environ:
-        num_workers = int(os.environ["RAY_NUM_WORKERS"])
-    else:
-        num_workers = 4
-    num_splits = int(ceil(sqrt(num_workers)))
-    if 'RAY_REDIS_ADDRESS' in os.environ:
-        address_info = ray.init(redis_address=os.environ['RAY_REDIS_ADDRESS'])
-    else:
-        print "No Redis address - using local instance"
-        address_info = ray.init(redis_address=ray.services.get_node_ip_address() + ":6379")
+    bench_env = raybench.Env()
+    num_splits = int(ceil(sqrt(bench_env.num_workers)))
+    bench_env.ray_init()
 
     matrix = mat_gen(2000, num_splits)
     benchmark_matmul(matrix, num_splits)

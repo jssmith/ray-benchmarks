@@ -30,7 +30,9 @@ class StressRay(object):
 
     def __init__(self, logger):
         self.logger = logger
+        self.num_workers = None
         self.container_id = None
+        self.container_ip = None
 
     def _get_container_id(self, stdoutdata):
         p = re.compile("([0-9a-f]{64})\n")
@@ -40,8 +42,17 @@ class StressRay(object):
         else:
             return m.group(1)
 
-    def start_ray(self):
-        shm_size = "1G"
+    def _get_container_ip(self, container_id):
+        proc = Popen(["docker", "inspect", "--format='{{.NetworkSettings.Networks.bridge.IPAddress}}'", container_id], stdout=PIPE)
+        (stdoutdata, _) = proc.communicate()
+        p = re.compile("([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})")
+        m = p.match(stdoutdata)
+        if not m:
+            raise RuntimeError("Container IP not found")
+        else:
+            return m.group(1)
+
+    def start_ray(self, shm_size, num_workers):
         proc = Popen(["docker", "run", "-d", "--shm-size=" + shm_size, "ray-project/benchmark", "/ray/scripts/start_ray.sh", "--head", "--redis-port=6379", "--num-workers=4"], stdout=PIPE)
         (stdoutdata, stderrdata) = proc.communicate()
         container_id = self._get_container_id(stdoutdata)
@@ -51,12 +62,16 @@ class StressRay(object):
             })
         if not container_id:
             raise RuntimeError("Failed to find container id")
-        else:
-            self.container_id = container_id
-            return container_id
+        self.container_id = container_id
+        self.num_workers = num_workers
+        self.container_ip = self._get_container_ip(container_id)
+        return container_id
 
     def run_benchmark(self, workload_script):
-        proc = Popen(["docker", "exec", self.container_id, "python", workload_script], stdout=PIPE)
+        proc = Popen(["docker", "exec",
+            self.container_id,
+            "/bin/bash", "-c",
+            "RAY_BENCHMARK_ENVIRONMENT=stress RAY_REDIS_ADDRESS={}:6379 RAY_NUM_WORKERS={} python {}".format(self.container_ip, self.num_workers, workload_script)], stdout=PIPE, stderr=PIPE)
         (stdoutdata, stderrdata) = proc.communicate()
         print stdoutdata
         print stderrdata
@@ -139,7 +154,7 @@ if __name__ == "__main__":
     workload_script = sys.argv[1]
     logger = Logger("log.txt")
     s = StressRay(logger)
-    container_id = s.start_ray()
+    container_id = s.start_ray(shm_size="1G", num_workers=4)
 
     # sleep a little bit to give Ray time to start
     time.sleep(2)

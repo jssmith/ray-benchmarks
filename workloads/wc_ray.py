@@ -3,10 +3,11 @@ import sys
 import re
 import ray
 import numpy as np
+import raybench
 
 from collections import defaultdict
 
-from raybench import benchmark_init, benchmark_measure
+
 
 @ray.remote
 def wc_gen(source_text, start_index, end_index):
@@ -61,14 +62,14 @@ def dict_merge(x, y):
 def init_wc(num_splits, words_per_split):
     with open('workloads/lear.txt', 'r') as f:
         source_text = f.read()
-    with benchmark_init():
+    with raybench.init():
         gen_jobs = list([wc_gen.remote(source_text, i, i + words_per_split) for i in range(0, num_splits * words_per_split, words_per_split)])
         ray.wait(gen_jobs, num_returns=num_splits)
         return gen_jobs
 
 
 def do_wc(input_splits):
-    with benchmark_measure():
+    with raybench.measure():
         results = [wc.remote(input_split) for input_split in input_splits]
         print "number of results is {}".format(len(results))
         res = tree_reduce_remote.remote(dict_merge, results)
@@ -90,20 +91,14 @@ def chunks(l, n):
         yield l[i:i + chunk_size]
 
 if __name__ == '__main__':
-    if "RAY_NUM_WORKERS" in os.environ:
-        num_workers = int(os.environ["RAY_NUM_WORKERS"])
-    else:
-        num_workers = 4
-    num_splits = 2 * num_workers
+    bench_env = raybench.Env()
+    bench_env.ray_init()
     ray.register_class(type(dict_merge.remote), pickle=True)
-    if 'RAY_REDIS_ADDRESS' in os.environ:
-        address_info = ray.init(redis_address=os.environ['RAY_REDIS_ADDRESS'])
-    else:
-        print "No Redis address - using local instance"
-        address_info = ray.init(redis_address=ray.services.get_node_ip_address() + ":6379")
+
+    num_splits = bench_env.num_workers
 
     input_splits = init_wc(num_splits, 100000)
     print "number of splits", len(input_splits)
-    do_wc(chunks(input_splits, num_workers))
+    do_wc(chunks(input_splits, bench_env.num_workers))
 
     ray.flush_log()
