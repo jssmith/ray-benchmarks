@@ -1,8 +1,7 @@
-import re
-import sys
-import time
-import logging
+import argparse
 import json
+import re
+import time
 
 from subprocess import Popen, PIPE
 
@@ -43,7 +42,7 @@ class StressRay(object):
             return m.group(1)
 
     def _get_container_ip(self, container_id):
-        proc = Popen(["docker", "inspect", "--format='{{.NetworkSettings.Networks.bridge.IPAddress}}'", container_id], stdout=PIPE)
+        proc = Popen(["docker", "inspect", "--format={{.NetworkSettings.Networks.bridge.IPAddress}}", container_id], stdout=PIPE, stderr=PIPE)
         (stdoutdata, _) = proc.communicate()
         p = re.compile("([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})")
         m = p.match(stdoutdata)
@@ -57,7 +56,8 @@ class StressRay(object):
         (stdoutdata, stderrdata) = proc.communicate()
         container_id = self._get_container_id(stdoutdata)
         self.logger.log("ray_start", {
-            "container_id" : container_id,
+            "head_container_id" : container_id,
+            "num_workers" : num_workers,
             "shm_size" : shm_size
             })
         if not container_id:
@@ -88,10 +88,11 @@ class StressRay(object):
         if not stopped_container_id or self.container_id != stopped_container_id:
             raise RuntimeError("Failed to stop container {}".format(self.container_id))
 
-    def _do_iteration(self, iteration_state):
+    def _do_iteration(self, workload_script, iteration_state):
         i = iteration_state.iteration_index
         iteration_state.iteration_index += 1
         self.logger.log("start_work", {
+            "head_container_id" : self.container_id,
             "iteration" : i
             })
         start_time = time.time()
@@ -99,6 +100,7 @@ class StressRay(object):
         elapsed_time = time.time() - start_time
         self.logger.log("finish_work", {
                 "iteration" : i,
+                "head_container_id" : self.container_id,
                 "elapsed_time" : elapsed_time,
                 "success" : success
             })
@@ -129,7 +131,9 @@ class StressRay(object):
 
         loop_predicate_iteration = lambda: iteration_state.iteration_index < iteration_target
         loop_predicate_time = lambda: time.time() - iteration_state.iteration_start_time < time_target
-        if iteration_target and not time_target:
+        if not iteration_target and not time_target:
+            raise RuntimeError("Must provide iteration target and / or time target")
+        elif iteration_target and not time_target:
             loop_predicate = loop_predicate_iteration
         elif time_target and not iteration_target:
             loop_predicate = loop_predicate_time
@@ -137,7 +141,7 @@ class StressRay(object):
             loop_predicate = lambda: loop_predicate_time() and loop_predicate_iteration()
 
         while loop_predicate():
-            if not self._do_iteration(iteration_state):
+            if not self._do_iteration(workload_script, iteration_state):
                 break
         iteration_state.iteration_end_time = time.time()
 
@@ -151,15 +155,21 @@ class StressRay(object):
             })
 
 if __name__ == "__main__":
-    workload_script = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Plot Ray workloads")
+    parser.add_argument("--workload", required=True, help="workload script")
+    parser.add_argument("--shm-size", default="1G", help="shared memory size")
+    parser.add_argument("--num-workers", default="4", help="number of workers")
+    parser.add_argument("--time-target", type=int, help="time target in seconds")
+    parser.add_argument("--iteration-target", type=int, help="iteration target in seconds")
+    args = parser.parse_args()
+
     logger = Logger("log.txt")
     s = StressRay(logger)
-    container_id = s.start_ray(shm_size="1G", num_workers=4)
+    container_id = s.start_ray(shm_size=args.shm_size, num_workers=args.num_workers)
 
     # sleep a little bit to give Ray time to start
     time.sleep(2)
 
-    # s.iterate_workload(workload_script, iteration_target=10)
-    s.iterate_workload(workload_script, time_target=20)
+    s.iterate_workload(args.workload, iteration_target=args.iteration_target, time_target=args.time_target)
 
     s.stop_ray()
