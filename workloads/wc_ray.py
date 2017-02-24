@@ -59,7 +59,7 @@ def dict_merge(x, y):
     return res
 
 def init_wc(num_splits, words_per_split):
-    with open('lear.txt', 'r') as f:
+    with open('workloads/lear.txt', 'r') as f:
         source_text = f.read()
     with benchmark_init():
         gen_jobs = list([wc_gen.remote(source_text, i, i + words_per_split) for i in range(0, num_splits * words_per_split, words_per_split)])
