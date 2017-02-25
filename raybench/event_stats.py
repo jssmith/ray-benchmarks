@@ -129,6 +129,9 @@ def benchmark_init():
 def benchmark_measure():
     return RayLogSpan('benchmark:measure')
 
+def benchmark_cleanup():
+    return RayLogSpan('benchmark:cleanup')
+
 def get_worker_ips(r):
     worker_ips = {}
     for worker_key in r.keys("Workers:*"):
