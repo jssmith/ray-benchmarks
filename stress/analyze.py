@@ -46,7 +46,8 @@ class Analysis(object):
     def summarize(self):
         stat_names = { "min_elapsed_time" : "min",
             "max_elapsed_time" : "max",
-            "avg_elapsed_time" : "avg"
+            "avg_elapsed_time" : "avg",
+            "ct" : "ct"
             }
         for s in self.all_stats:
             sc = s["experiment_config"]["system_config"]
@@ -58,7 +59,7 @@ class Analysis(object):
             keyprefixlen = len("None:None:")
             for key, stats in s["summary_stats"].items():
                 measurement = key[keyprefixlen:]
-                for stat in [ "min_elapsed_time", "max_elapsed_time", "avg_elapsed_time" ]:
+                for stat in [ "min_elapsed_time", "max_elapsed_time", "avg_elapsed_time", "ct" ]:
                     print experiment_desc, measurement, stat_names[stat], stats[stat]
 
 
