@@ -18,7 +18,7 @@ if __name__ == '__main__':
     bench_env = raybench.Env()
     bench_env.ray_init()
 
-    num_tasks = 100
+    num_tasks = 10000
     benchmark_launchtasks(num_tasks)
     print "BENCHMARK_STATS:", json.dumps({
         "config": { "num_tasks" : num_tasks },
