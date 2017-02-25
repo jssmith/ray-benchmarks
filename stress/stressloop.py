@@ -1,10 +1,11 @@
 import argparse
 import json
 import re
+import subprocess32
 import sys
 import time
 
-from subprocess import Popen, PIPE
+from subprocess32 import Popen, PIPE
 
 class Logger(object):
     def __init__(self, fn):
@@ -117,12 +118,36 @@ class StressRay(object):
         for _ in range(n_b):
             self._start_worker_node(shm_size, workers_per_node_b)
 
-    def run_benchmark(self, workload_script):
+    def run_benchmark(self, workload_script, log_start_fn, waited_time_limit=None):
         proc = Popen(["docker", "exec",
             self.head_container_id,
             "/bin/bash", "-c",
             "RAY_BENCHMARK_ENVIRONMENT=stress RAY_REDIS_ADDRESS={}:6379 RAY_NUM_WORKERS={} python {}".format(self.head_container_ip, self.num_workers, workload_script)], stdout=PIPE, stderr=PIPE)
-        (stdoutdata, stderrdata) = proc.communicate()
+
+        log_start_fn(proc.pid)
+        start_time = time.time()
+        done = False
+        while not done:
+            try:
+                (stdoutdata, stderrdata) = proc.communicate(timeout=min(10, waited_time_limit))
+                done = True
+            except(subprocess32.TimeoutExpired):
+                waited_time = time.time() - start_time
+                if waited_time_limit and waited_time > waited_time_limit:
+                    self.logger.log("killed", {
+                        "pid" : proc.pid,
+                        "waited_time" : waited_time,
+                        "waited_time_limit" : waited_time_limit
+                        })
+                    proc.kill()
+                    return False
+                else:
+                    self.logger.log("waiting", {
+                        "pid" : proc.pid,
+                        "time_waited" : waited_time,
+                        "waited_time_limit" : waited_time_limit
+                        })
+
         print stdoutdata
         print stderrdata
         print "return code", proc.returncode
@@ -147,15 +172,17 @@ class StressRay(object):
         for container_id in self.worker_container_ids:
             self._stop_node(container_id)
 
-    def _do_iteration(self, workload_script, iteration_state):
+    def _do_iteration(self, workload_script, iteration_state, waited_time_limit):
         i = iteration_state.iteration_index
         iteration_state.iteration_index += 1
-        self.logger.log("start_work", {
-            "head_container_id" : self.head_container_id,
-            "iteration" : i
-            })
+        def log_start(pid):
+            self.logger.log("start_work", {
+                "head_container_id" : self.head_container_id,
+                "iteration" : i,
+                "pid" : pid,
+                })
         start_time = time.time()
-        success = self.run_benchmark(workload_script)
+        success = self.run_benchmark(workload_script, log_start, waited_time_limit=waited_time_limit)
         elapsed_time = time.time() - start_time
         self.logger.log("finish_work", {
                 "iteration" : i,
@@ -200,6 +227,11 @@ class StressRay(object):
         else:
             loop_predicate = lambda: loop_predicate_time() and loop_predicate_iteration()
 
+        if time_target:
+            waited_time_limit = 2 * time_target
+        else:
+            waited_time_limit = None
+
         logger.log("start_iterations", {
             "workload_script" : workload_script,
             "head_container_id" : self.head_container_id,
@@ -207,7 +239,7 @@ class StressRay(object):
             "time_target" : time_target
             })
         while loop_predicate():
-            if not self._do_iteration(workload_script, iteration_state):
+            if not self._do_iteration(workload_script, iteration_state, waited_time_limit):
                 break
         iteration_state.iteration_end_time = time.time()
 
