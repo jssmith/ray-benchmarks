@@ -47,9 +47,9 @@ def benchmark_matmul(blocks, dim_blocks):
 
 if __name__ == '__main__':
     bench_env = raybench.Env()
-    num_splits = int(ceil(sqrt(bench_env.num_workers)))
     bench_env.ray_init()
 
+    num_splits = int(ceil(sqrt(bench_env.num_workers)))
     matrix = mat_gen(2000, num_splits)
     benchmark_matmul(matrix, num_splits)
     ray.flush_log()

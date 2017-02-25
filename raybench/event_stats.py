@@ -202,6 +202,9 @@ def benchmark_init_noray():
 def benchmark_measure_noray():
     return BenchmarkLogSpan('benchmark:measure')
 
+def log_span_events():
+    return _events
+
 def print_stats_summary_noray(config_info):
     stats = {}
     stats['config'] = config_info

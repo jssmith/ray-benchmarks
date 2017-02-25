@@ -147,14 +147,19 @@ class StressRay(object):
                         "time_waited" : waited_time,
                         "waited_time_limit" : waited_time_limit
                         })
+        m = re.search('^BENCHMARK_STATS: ({.*})$', stdoutdata, re.MULTILINE)
+        if m:
+            output_stats = json.loads(m.group(1))
+        else:
+            output_stats = {}
 
         print stdoutdata
         print stderrdata
-        print "return code", proc.returncode
-        if proc.returncode == 0:
-            return True
-        else:
-            return False
+        return {
+            "success" : proc.returncode == 0,
+            "return_code" : proc.returncode,
+            "stats" : output_stats
+            }
 
     def _stop_node(self, container_id):
         proc = Popen(["docker", "kill", container_id], stdout=PIPE)
@@ -182,13 +187,15 @@ class StressRay(object):
                 "pid" : pid,
                 })
         start_time = time.time()
-        success = self.run_benchmark(workload_script, log_start, waited_time_limit=waited_time_limit)
+        benchmark_result = self.run_benchmark(workload_script, log_start, waited_time_limit=waited_time_limit)
+        success = benchmark_result["success"]
         elapsed_time = time.time() - start_time
         self.logger.log("finish_work", {
                 "iteration" : i,
                 "head_container_id" : self.head_container_id,
                 "workload_script" : workload_script,
                 "elapsed_time" : elapsed_time,
+                "stats" : benchmark_result["stats"],
                 "success" : success
             })
 
@@ -232,7 +239,7 @@ class StressRay(object):
         else:
             waited_time_limit = None
 
-        logger.log("start_iterations", {
+        self.logger.log("start_iterations", {
             "workload_script" : workload_script,
             "head_container_id" : self.head_container_id,
             "iteration_target" : iteration_target,
@@ -243,7 +250,7 @@ class StressRay(object):
                 break
         iteration_state.iteration_end_time = time.time()
 
-        logger.log("finish_iterations", {
+        self.logger.log("finish_iterations", {
             "workload_script" : workload_script,
             "num_successes" : iteration_state.num_successes,
             "num_failures" : iteration_state.num_failures,
