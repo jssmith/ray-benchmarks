@@ -117,7 +117,6 @@ class StressRay(object):
         for _ in range(n_b):
             self._start_worker_node(shm_size, workers_per_node_b)
 
-
     def run_benchmark(self, workload_script):
         proc = Popen(["docker", "exec",
             self.head_container_id,
@@ -201,7 +200,6 @@ class StressRay(object):
         else:
             loop_predicate = lambda: loop_predicate_time() and loop_predicate_iteration()
 
-
         logger.log("start_iterations", {
             "workload_script" : workload_script,
             "head_container_id" : self.head_container_id,
@@ -221,8 +219,9 @@ class StressRay(object):
             "iteration_end_reason" : iteration_state.iteration_end_reason
             })
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Plot Ray workloads")
+    parser = argparse.ArgumentParser(prog="stressloop.py", description="Plot Ray workloads")
     parser.add_argument("--workload", required=True, help="workload script")
     parser.add_argument("--shm-size", default="1G", help="shared memory size")
     parser.add_argument("--num-workers", default=4, type= int, help="number of workers")
@@ -231,6 +230,9 @@ if __name__ == "__main__":
     parser.add_argument("--iteration-target", type=int, help="iteration target in seconds")
     parser.add_argument("--log", help="event log file")
     args = parser.parse_args()
+
+    if not args.time_target and not args.iteration_target:
+        parser.error("must provide --time-target, --iteration-target, or both")
 
     with Logger(args.log) as logger:
         s = StressRay(logger)
