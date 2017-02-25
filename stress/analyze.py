@@ -44,6 +44,10 @@ class Analysis(object):
             self.all_stats.append(fp.get_analysis())
 
     def summarize(self):
+        stat_names = { "min_elapsed_time" : "min",
+            "max_elapsed_time" : "max",
+            "avg_elapsed_time" : "avg"
+            }
         for s in self.all_stats:
             sc = s["experiment_config"]["system_config"]
             wl = s["experiment_config"]["workload"]
@@ -54,7 +58,8 @@ class Analysis(object):
             keyprefixlen = len("None:None:")
             for key, stats in s["summary_stats"].items():
                 measurement = key[keyprefixlen:]
-                print experiment_desc, measurement, stats["min_elapsed_time"], stats["max_elapsed_time"]
+                for stat in [ "min_elapsed_time", "max_elapsed_time", "avg_elapsed_time" ]:
+                    print experiment_desc, measurement, stat_names[stat], stats[stat]
 
 
 if __name__ == "__main__":
