@@ -64,8 +64,8 @@ class StressRay(object):
         else:
             return m.group(1)
 
-    def _start_head_node(self, shm_size, num_workers):
-        proc = Popen(["docker", "run", "-d", "--shm-size=" + shm_size, "ray-project/benchmark", "/ray/scripts/start_ray.sh", "--head", "--redis-port=6379", "--num-workers={:d}".format(num_workers)], stdout=PIPE)
+    def _start_head_node(self, mem_size, shm_size, num_workers):
+        proc = Popen(["docker", "run", "-d", "--memory=" + mem_size, "--shm-size=" + shm_size, "ray-project/benchmark", "/ray/scripts/start_ray.sh", "--head", "--redis-port=6379", "--num-workers={:d}".format(num_workers)], stdout=PIPE)
         (stdoutdata, stderrdata) = proc.communicate()
         container_id = self._get_container_id(stdoutdata)
         self.logger.log("start_node", {
@@ -80,8 +80,8 @@ class StressRay(object):
         self.head_container_ip = self._get_container_ip(container_id)
         return container_id
 
-    def _start_worker_node(self, shm_size, num_workers):
-        proc = Popen(["docker", "run", "-d", "--shm-size=" + shm_size, "ray-project/benchmark", "/ray/scripts/start_ray.sh", "--redis-address={:s}:6379".format(self.head_container_ip), "--num-workers={:d}".format(num_workers)], stdout=PIPE)
+    def _start_worker_node(self, mem_size, shm_size, num_workers):
+        proc = Popen(["docker", "run", "-d", "--memory=" + mem_size, "--shm-size=" + shm_size, "ray-project/benchmark", "/ray/scripts/start_ray.sh", "--redis-address={:s}:6379".format(self.head_container_ip), "--num-workers={:d}".format(num_workers)], stdout=PIPE)
         (stdoutdata, stderrdata) = proc.communicate()
         container_id = self._get_container_id(stdoutdata)
         if not container_id:
@@ -94,7 +94,7 @@ class StressRay(object):
             "shm_size" : shm_size
             })
 
-    def start_ray(self, shm_size, num_workers, num_nodes):
+    def start_ray(self, mem_size, shm_size, num_workers, num_nodes):
         if num_workers < num_nodes:
             raise RuntimeError("number of workers must exceed number of nodes")
         self.num_workers = num_workers
@@ -112,17 +112,17 @@ class StressRay(object):
             n_a = n_a - 1
 
         # launch the head node
-        self._start_head_node(shm_size, workers_per_node_h)
+        self._start_head_node(mem_size, shm_size, workers_per_node_h)
         for _ in range(n_a):
-            self._start_worker_node(shm_size, workers_per_node_a)
+            self._start_worker_node(mem_size, shm_size, workers_per_node_a)
         for _ in range(n_b):
-            self._start_worker_node(shm_size, workers_per_node_b)
+            self._start_worker_node(mem_size, shm_size, workers_per_node_b)
 
-    def run_benchmark(self, workload_script, log_start_fn, waited_time_limit=None):
+    def run_benchmark(self, workload_script, benchmark_iteration, log_start_fn, waited_time_limit=None):
         proc = Popen(["docker", "exec",
             self.head_container_id,
             "/bin/bash", "-c",
-            "RAY_BENCHMARK_ENVIRONMENT=stress RAY_REDIS_ADDRESS={}:6379 RAY_NUM_WORKERS={} python {}".format(self.head_container_ip, self.num_workers, workload_script)], stdout=PIPE, stderr=PIPE)
+            "RAY_BENCHMARK_ENVIRONMENT=stress RAY_BENCHMARK_ITERATION={} RAY_REDIS_ADDRESS={}:6379 RAY_NUM_WORKERS={} python {}".format(benchmark_iteration, self.head_container_ip, self.num_workers, workload_script)], stdout=PIPE, stderr=PIPE)
 
         log_start_fn(proc.pid)
         start_time = time.time()
@@ -140,7 +140,11 @@ class StressRay(object):
                         "waited_time_limit" : waited_time_limit
                         })
                     proc.kill()
-                    return False
+                    return {
+                        "success" : False,
+                        "return_code" : None,
+                        "stats" : {}
+                        }
                 else:
                     self.logger.log("waiting", {
                         "pid" : proc.pid,
@@ -187,7 +191,7 @@ class StressRay(object):
                 "pid" : pid,
                 })
         start_time = time.time()
-        benchmark_result = self.run_benchmark(workload_script, log_start, waited_time_limit=waited_time_limit)
+        benchmark_result = self.run_benchmark(workload_script, i, log_start, waited_time_limit=waited_time_limit)
         success = benchmark_result["success"]
         elapsed_time = time.time() - start_time
         self.logger.log("finish_work", {
@@ -213,7 +217,7 @@ class StressRay(object):
                 continue_iteration = True
         return continue_iteration
 
-    def iterate_workload(self, workload_script, iteration_target=None, time_target=None):
+    def iterate_workload(self, workload_script, iteration_target=None, time_target=None, execution_time_limit=None):
         class iteration_state: pass
         iteration_state.sequential_failures = 0
         iteration_state.excessive_failures = False
@@ -236,8 +240,13 @@ class StressRay(object):
 
         if time_target:
             waited_time_limit = 2 * time_target
+            if execution_time_limit:
+                waited_time_limit = min(waited_time_limit, execution_time_limit)
         else:
-            waited_time_limit = None
+            if execution_time_limit:
+                waited_time_limit = execution_time_limit
+            else:
+                waited_time_limit = None
 
         self.logger.log("start_iterations", {
             "workload_script" : workload_script,
@@ -262,11 +271,13 @@ class StressRay(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="stressloop.py", description="Plot Ray workloads")
     parser.add_argument("--workload", required=True, help="workload script")
+    parser.add_argument("--mem-size", default="2G", help="memory size")
     parser.add_argument("--shm-size", default="1G", help="shared memory size")
     parser.add_argument("--num-workers", default=4, type= int, help="number of workers")
     parser.add_argument("--num-nodes", default=1, type=int, help="number of instances")
     parser.add_argument("--time-target", type=int, help="time target in seconds")
     parser.add_argument("--iteration-target", type=int, help="iteration target in seconds")
+    parser.add_argument("--task-time-limit", type=int, help="task execution time limit")
     parser.add_argument("--log", help="event log file")
     args = parser.parse_args()
 
@@ -275,11 +286,11 @@ if __name__ == "__main__":
 
     with Logger(args.log) as logger:
         s = StressRay(logger)
-        s.start_ray(shm_size=args.shm_size, num_workers=args.num_workers, num_nodes=args.num_nodes)
+        s.start_ray(mem_size=arsg.mem_size, shm_size=args.shm_size, num_workers=args.num_workers, num_nodes=args.num_nodes)
 
         # sleep a little bit to give Ray time to start
         time.sleep(2)
 
-        s.iterate_workload(args.workload, iteration_target=args.iteration_target, time_target=args.time_target)
+        s.iterate_workload(args.workload, iteration_target=args.iteration_target, time_target=args.time_target, execution_time_limit=args.task_time_limit)
 
         s.stop_ray()

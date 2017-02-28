@@ -20,24 +20,44 @@ def run_experiment(experiment_name, workload, system_config):
             "workload" : workload
             })
         s = StressRay(logger)
-        s.start_ray(shm_size=system_config["shm_size"], num_workers=system_config["num_workers"], num_nodes=system_config["num_nodes"])
+        s.start_ray(shm_size=system_config["shm_size"], mem_size=system_config["mem_size"], num_workers=system_config["num_workers"], num_nodes=system_config["num_nodes"])
         time.sleep(2)
-        s.iterate_workload(workload["workload_script"], iteration_target=10, time_target=None)
+        execution_time_limit = workload["execution_time_limit"] if "execution_time_limit" in workload else None
+        s.iterate_workload(workload["workload_script"], iteration_target=workload["iteration_target"], time_target=workload["time_target"], execution_time_limit=execution_time_limit)
         s.stop_ray()
 
     # analysis
 
 
 if __name__ == "__main__":
-    experiment_name = "run1"
+    experiment_name = "run2"
     system_configs = [ 
-        { "num_workers" : 100, "num_nodes" : 1, "shm_size" : "1G" },
-        { "num_workers" : 100, "num_nodes" : 2, "shm_size" : "1G"}
+        { "num_workers" : 100, "num_nodes" : 1, "shm_size" : "1G", "mem_size" : "2G" },
+        { "num_workers" : 100, "num_nodes" : 2, "shm_size" : "1G", "mem_size" : "2G" }
         ]
 
     workloads = [
-        { "name" : "launch_donothing", "workload_script" : "workloads/donothing10k.py" },
-        { "name" : "sleep_donothing", "workload_script" : "workloads/sleep1s10k.py" }
+        {
+            "name" : "launch_donothing",
+            "workload_script" : "workloads/donothing10k.py",
+            "iteration_target" : 10,
+            "time_target" : None,
+            "execution_time_limit" : None
+        },
+        {
+            "name" : "sleep_donothing",
+            "workload_script" : "workloads/sleep1s10k.py",
+            "iteration_target" : 10,
+            "time_target" : None,
+            "execution_time_limit" : None
+        },
+        {
+            "name" : "worker_blocking",
+            "workload_script" : "workloads/blocking.py",
+            "iteration_target" : None,
+            "time_target" : 3600,
+            "execution_time_limit" : 10
+        }
         ]
 
     if not os.path.exists(log_directory):

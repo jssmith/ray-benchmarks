@@ -27,7 +27,8 @@ class Analysis(object):
             self.experiment_config = e["data"]
 
         def handle_finish_work_event(self, e):
-            [self.analysis.add_event(ev) for ev in e["data"]["stats"]["events"]]
+            if e["data"]["success"]:
+                [self.analysis.add_event(ev) for ev in e["data"]["stats"]["events"]]
 
         def get_analysis(self):
             a = {}
@@ -60,7 +61,7 @@ class Analysis(object):
             for key, stats in s["summary_stats"].items():
                 measurement = key[keyprefixlen:]
                 for stat in [ "min_elapsed_time", "max_elapsed_time", "avg_elapsed_time", "ct" ]:
-                    print experiment_desc, measurement, stat_names[stat], stats[stat]
+                    print name, num_workers, num_nodes, measurement, stat_names[stat], stats[stat]
 
 
 if __name__ == "__main__":

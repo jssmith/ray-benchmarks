@@ -11,6 +11,7 @@ class Env(object):
                     raise RuntimeError("RAY_BENCHMARK_ENVIRONMENT=stress")
             else:
                 raise RuntimeError("Unknown benchmark environment: {}".format(benchmark_environment))
+
         if "RAY_NUM_WORKERS" in os.environ:
             self.num_workers = int(os.environ["RAY_NUM_WORKERS"])
         else:
@@ -20,6 +21,12 @@ class Env(object):
             self.redis_address = os.environ['RAY_REDIS_ADDRESS']
         else:
             self.redis_address = None
+
+        if "RAY_BENCHMARK_ITERATION" in os.environ:
+            self.benchmark_iteration = int(os.environ["RAY_BENCHMARK_ITERATION"])
+        else:
+            self.benchmark_iteration = 0
+
 
     def ray_init(self):
         if self.redis_address:
