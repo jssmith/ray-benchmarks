@@ -32,8 +32,8 @@ def run_experiment(experiment_name, workload, system_config):
 if __name__ == "__main__":
     experiment_name = "run2"
     system_configs = [ 
-        { "num_workers" : 100, "num_nodes" : 1, "shm_size" : "1G", "mem_size" : "2G" },
-        { "num_workers" : 100, "num_nodes" : 2, "shm_size" : "1G", "mem_size" : "2G" }
+        { "num_workers" : 100, "num_nodes" : 1, "shm_size" : "1G", "mem_size" : None },
+        { "num_workers" : 100, "num_nodes" : 2, "shm_size" : "1G", "mem_size" : None }
         ]
 
     workloads = [

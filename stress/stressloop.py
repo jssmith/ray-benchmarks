@@ -65,7 +65,9 @@ class StressRay(object):
             return m.group(1)
 
     def _start_head_node(self, mem_size, shm_size, num_workers):
-        proc = Popen(["docker", "run", "-d", "--memory=" + mem_size, "--shm-size=" + shm_size, "ray-project/benchmark", "/ray/scripts/start_ray.sh", "--head", "--redis-port=6379", "--num-workers={:d}".format(num_workers)], stdout=PIPE)
+        mem_arg = ["--memory=" + mem_size] if mem_size else []
+        shm_arg = ["--shm-size=" + shm_size] if shm_size else []
+        proc = Popen(["docker", "run", "-d"] + mem_arg + shm_arg + ["ray-project/benchmark", "/ray/scripts/start_ray.sh", "--head", "--redis-port=6379", "--num-workers={:d}".format(num_workers)], stdout=PIPE)
         (stdoutdata, stderrdata) = proc.communicate()
         container_id = self._get_container_id(stdoutdata)
         self.logger.log("start_node", {
@@ -81,7 +83,9 @@ class StressRay(object):
         return container_id
 
     def _start_worker_node(self, mem_size, shm_size, num_workers):
-        proc = Popen(["docker", "run", "-d", "--memory=" + mem_size, "--shm-size=" + shm_size, "ray-project/benchmark", "/ray/scripts/start_ray.sh", "--redis-address={:s}:6379".format(self.head_container_ip), "--num-workers={:d}".format(num_workers)], stdout=PIPE)
+        mem_arg = ["--memory=" + mem_size] if mem_size else []
+        shm_arg = ["--shm-size=" + shm_size] if shm_size else []
+        proc = Popen(["docker", "run", "-d"] + mem_arg + shm_arg + ["--shm-size=" + shm_size, "ray-project/benchmark", "/ray/scripts/start_ray.sh", "--redis-address={:s}:6379".format(self.head_container_ip), "--num-workers={:d}".format(num_workers)], stdout=PIPE)
         (stdoutdata, stderrdata) = proc.communicate()
         container_id = self._get_container_id(stdoutdata)
         if not container_id:
@@ -271,7 +275,7 @@ class StressRay(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="stressloop.py", description="Plot Ray workloads")
     parser.add_argument("--workload", required=True, help="workload script")
-    parser.add_argument("--mem-size", default="2G", help="memory size")
+    parser.add_argument("--mem-size", help="memory size")
     parser.add_argument("--shm-size", default="1G", help="shared memory size")
     parser.add_argument("--num-workers", default=4, type= int, help="number of workers")
     parser.add_argument("--num-nodes", default=1, type=int, help="number of instances")
@@ -286,7 +290,7 @@ if __name__ == "__main__":
 
     with Logger(args.log) as logger:
         s = StressRay(logger)
-        s.start_ray(mem_size=arsg.mem_size, shm_size=args.shm_size, num_workers=args.num_workers, num_nodes=args.num_nodes)
+        s.start_ray(mem_size=args.mem_size, shm_size=args.shm_size, num_workers=args.num_workers, num_nodes=args.num_nodes)
 
         # sleep a little bit to give Ray time to start
         time.sleep(2)
