@@ -2,7 +2,7 @@ import json
 import ray
 import raybench
 
-import raybench.event_stats as eventstats
+import raybench.eventstats as eventstats
 
 def test_blocking_tasks(num_tasks):
     @ray.remote

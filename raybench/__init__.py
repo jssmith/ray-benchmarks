@@ -1,4 +1,4 @@
-from .event_stats import benchmark_init as init
-from .event_stats import benchmark_measure as measure
-from .event_stats import benchmark_cleanup as cleanup
+from .eventstats import benchmark_init as init
+from .eventstats import benchmark_measure as measure
+from .eventstats import benchmark_cleanup as cleanup
 from .env import Env

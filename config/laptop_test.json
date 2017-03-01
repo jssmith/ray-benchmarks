@@ -1,0 +1,25 @@
+{
+    "system_configs":[
+        {
+            "num_workers":10,
+            "num_nodes":1,
+            "shm_size":"1G",
+            "mem_size":null
+        },
+        {
+            "num_workers":10,
+            "num_nodes":2,
+            "shm_size":"1G",
+            "mem_size":null
+        }
+    ],
+    "workloads":[
+        {
+            "name":"launch_donothing",
+            "workload_script":"workloads/donothing.py",
+            "iteration_target":10,
+            "time_target":null,
+            "execution_time_limit":null
+        }
+    ]
+}

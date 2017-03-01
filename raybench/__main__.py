@@ -5,7 +5,7 @@ import re
 import os
 from subprocess import Popen, PIPE
 
-import event_stats
+import eventstats
 
 import raybench
 

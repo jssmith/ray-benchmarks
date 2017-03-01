@@ -8,7 +8,6 @@ import raybench
 from collections import defaultdict
 
 
-
 @ray.remote
 def wc_gen(source_text, start_index, end_index):
     print "generating {} words on range {} - {}".format(end_index - start_index, start_index, end_index)
@@ -99,6 +98,6 @@ if __name__ == '__main__':
 
     input_splits = init_wc(num_splits, 100000)
     print "number of splits", len(input_splits)
-    do_wc(chunks(input_splits, bench_env.num_workers))
+    do_wc(input_splits)
 
     ray.flush_log()

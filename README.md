@@ -1,6 +1,23 @@
-# Ray Benchmarks
+# Ray Benchmarks and Stress Tests
+
+The project provides the capability
 
 The Ray Benchmarks are simple examples designed to test basic algorithms in a distributed setting.
+
+
+## Docker Tips
+
+### See what Docker containers are running
+
+```
+
+```
+
+### Killing Docker containers
+
+```
+docker kill $(docker ps -q)
+```
 
 ## Word Count
 

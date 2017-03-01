@@ -1,4 +1,4 @@
-import raybench.event_stats as eventstats
+import raybench.eventstats as eventstats
 import json
 
 from os import listdir

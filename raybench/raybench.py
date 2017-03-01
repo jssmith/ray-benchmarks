@@ -5,7 +5,7 @@ import re
 import os
 from subprocess import Popen, PIPE
 
-import event_stats
+import eventstats
 
 class ClusterControl(object):
     def __init__(self, master_node, worker_nodes):

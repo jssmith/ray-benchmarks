@@ -216,7 +216,7 @@ def print_stats_summary_noray(config_info):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print "Usage: event_stats.py input.json.gz [input.json.gz ...]"
+        print "Usage: eventstats.py input.json.gz [input.json.gz ...]"
         sys.exit(1)
     input_files = sys.argv[1:]
     for input_file in input_files:

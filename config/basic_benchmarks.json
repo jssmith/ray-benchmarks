@@ -1,0 +1,32 @@
+{
+    "system_configs":[
+        {
+            "num_workers":10,
+            "num_nodes":1,
+            "shm_size":"1G",
+            "mem_size":null
+        },
+        {
+            "num_workers":10,
+            "num_nodes":2,
+            "shm_size":"1G",
+            "mem_size":null
+        }
+    ],
+    "workloads":[
+        {
+            "name":"matmul",
+            "workload_script":"workloads/matmul.py",
+            "iteration_target":null,
+            "time_target":3600,
+            "execution_time_limit":30
+        },
+        {
+            "name":"wc",
+            "workload_script":"workloads/wc.py",
+            "iteration_target":null,
+            "time_target":3600,
+            "execution_time_limit":30
+        }
+    ]
+}

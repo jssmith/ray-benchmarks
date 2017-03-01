@@ -1,7 +1,7 @@
 import json
 import ray
 import raybench
-import raybench.event_stats as eventstats
+import raybench.eventstats as eventstats
 import time
 
 @ray.remote
@@ -18,7 +18,7 @@ if __name__ == '__main__':
     bench_env = raybench.Env()
     bench_env.ray_init()
 
-    num_tasks = 10000
+    num_tasks = 100 * bench_env.num_workers
     benchmark_launchtasks(num_tasks)
     print "BENCHMARK_STATS:", json.dumps({
         "config": { "num_tasks" : num_tasks },
