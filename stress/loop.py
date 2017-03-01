@@ -273,7 +273,7 @@ class StressRay(object):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="stressloop.py", description="Plot Ray workloads")
+    parser = argparse.ArgumentParser(prog="loop.py", description="Plot Ray workloads")
     parser.add_argument("--workload", required=True, help="workload script")
     parser.add_argument("--mem-size", help="memory size")
     parser.add_argument("--shm-size", default="1G", help="shared memory size")

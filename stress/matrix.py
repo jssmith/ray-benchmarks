@@ -3,7 +3,7 @@ import json
 import os
 import time
 
-from stressloop import Logger, StressRay
+from loop import Logger, StressRay
 
 def run_experiment(experiment_name, workload, system_config, log_directory):
     log_filename = os.path.join(log_directory, "{}_{}_{}_{}_{}.log".format(
