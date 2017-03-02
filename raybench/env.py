@@ -33,3 +33,4 @@ class Env(object):
             self.address_info = ray.init(redis_address=self.redis_address)
         else:
             self.address_info = ray.init(num_workers=self.num_workers)
+        return self.address_info

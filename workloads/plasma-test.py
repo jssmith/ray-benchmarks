@@ -64,10 +64,6 @@ def TEST_GetBeforeAfterPut(numobj_getperf, numobj_put):
         print("relative time={} to get initial numobj={} objects".format(dt2/dt1, numobj_getperf))
         print("relative time={} to get new numobj={} objects".format(dt3/dt1, numobj_getperf))
 
-def get_plasma_client():
-    for name in os.path.listdir("/tmp"):
-        if (name.startswith("plasma_store")):
-            return os.path.join("/tmp", name)
 
 if __name__ == "__main__":
     bench_env = raybench.Env()
@@ -75,12 +71,6 @@ if __name__ == "__main__":
     plasma_socket = out['object_store_addresses'][0].name
     client = plasma.PlasmaClient(plasma_socket)
     TEST_PutAfterPut(10**6)
-    #ray.worker.cleanup()
-    #time.sleep(1)
-
-    #out = ray.init()
-    #plasma_socket = out['object_store_addresses'][0].name
-    #client = plasma.PlasmaClient(plasma_socket)
     TEST_GetBeforeAfterPut(10**5, 10**6)
     TEST_PutGetLinearScale()
     TEST_PutLinearScale()
