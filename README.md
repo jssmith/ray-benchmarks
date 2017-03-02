@@ -22,10 +22,21 @@ Run the command:
 
 ## Run 
 
+To run a parameter sweep:
 ```
-python stress/matrix.py config/test.json
+python stress/sweep.py \
+    --experiment-name=first_test \
+    --log-directory=logs \
+    config/test.json
 ```
 
+This command runs a variety of system and workload configurations, writing outputs to the logs directory.
+
+## Analyze
+
+```
+python stress/analyze.py logs
+```
 
 ## Tips
 

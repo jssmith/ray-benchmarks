@@ -6,8 +6,7 @@ import time
 from loop import Logger, StressRay
 
 def run_experiment(experiment_name, workload, system_config, log_directory):
-    log_filename = os.path.join(log_directory, "{}_{}_{}_{}_{}.log".format(
-        experiment_name,
+    log_filename = os.path.join(log_directory, "{}_{}_{}_{}.log".format(
         workload["name"],
         system_config["num_nodes"],
         system_config["num_workers"],
@@ -38,15 +37,15 @@ if __name__ == "__main__":
     with open(args.configuration) as f:
         config = json.load(f)
 
-    log_directory = os.path.join(args.log_directory, time.strftime("%Y%m%d_%H%M%S"))
-    if not os.path.exists(log_directory):
-        os.makedirs(log_directory)
-    print("Output to {}".format(log_directory))
-
     if args.experiment_name:
         experiment_name = args.experiment_name
     else:
         experiment_name = os.path.splitext(os.path.basename(args.configuration))[0]
+
+    log_directory = os.path.join(args.log_directory, experiment_name, time.strftime("%Y%m%d_%H%M%S"))
+    if not os.path.exists(log_directory):
+        os.makedirs(log_directory)
+    print("Output to {}".format(log_directory))
 
     for system_config in config["system_configs"]:
         for workload in config["workloads"]:

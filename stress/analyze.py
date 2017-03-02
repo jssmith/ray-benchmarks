@@ -1,8 +1,9 @@
+import argparse
 import raybench.eventstats as eventstats
 import json
 
 from os import listdir
-from os.path import join
+from os.path import join, isdir
 
 
 class Analysis(object):
@@ -37,7 +38,6 @@ class Analysis(object):
             return a
 
     def add_file(self, filename):
-        # print "analyze", filename
         with open(filename, "r") as f:
             fp = Analysis.FileProcessor()
             for line in f:
@@ -65,9 +65,23 @@ class Analysis(object):
 
 
 if __name__ == "__main__":
-    experiment_name = "run1"
-    log_directory = "./logs"
+    parser = argparse.ArgumentParser(prog="analyze.py", description="Analyze logs of Ray performance and stress testing")
+    parser.add_argument("logdirectory", help="json configuration file")
+    parser.add_argument("--no-recurse", action='store_true', help="look for log files recursively")
+    args = parser.parse_args()
+
+    def findfiles(dir):
+        all_files = []
+        for name in listdir(dir):
+            name_path = join(dir, name)
+            if isdir(name_path):
+                if not args.no_recurse:
+                    all_files += findfiles(name_path)
+            else:
+                all_files.append(name_path)
+        return all_files
+
     a = Analysis()
-    for f in listdir(log_directory):
-        a.add_file(join(log_directory, f))
+    for f in findfiles(args.logdirectory):
+        a.add_file(f)
     a.summarize()

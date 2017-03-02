@@ -177,8 +177,9 @@ def print_stats_summary(config_info, redis_address):
 _events = []
 
 class BenchmarkLogSpan():
-    def __init__(self, name):
+    def __init__(self, name, extras={}):
         self._name = name
+        self._extras = extras
 
     def _event(self, status):
         _events.append({
@@ -187,7 +188,7 @@ class BenchmarkLogSpan():
                 'task_id' : -1,
                 'event_type' : self._name,
                 'status' : status,
-                'extras' : {},
+                'extras' : self._extras,
             })
 
     def __enter__(self):
