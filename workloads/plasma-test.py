@@ -71,10 +71,16 @@ def get_plasma_client():
 
 if __name__ == "__main__":
     bench_env = raybench.Env()
-    bench_env.ray_init()
-
-    client = plasma.PlasmaClient("/tmp/plasma_store48627551")
+    out = bench_env.ray_init()
+    plasma_socket = out['object_store_addresses'][0].name
+    client = plasma.PlasmaClient(plasma_socket)
     TEST_PutAfterPut(10**6)
+    #ray.worker.cleanup()
+    #time.sleep(1)
+
+    #out = ray.init()
+    #plasma_socket = out['object_store_addresses'][0].name
+    #client = plasma.PlasmaClient(plasma_socket)
     TEST_GetBeforeAfterPut(10**5, 10**6)
     TEST_PutGetLinearScale()
     TEST_PutLinearScale()
