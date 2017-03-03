@@ -70,6 +70,7 @@ if __name__ == "__main__":
     out = bench_env.ray_init()
     plasma_socket = out['object_store_addresses'][0].name
     client = plasma.PlasmaClient(plasma_socket)
+    # TODO: just run one of these
     TEST_PutAfterPut(10**6)
     TEST_GetBeforeAfterPut(10**5, 10**6)
     TEST_PutGetLinearScale()
