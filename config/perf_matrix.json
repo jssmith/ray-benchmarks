@@ -15,14 +15,14 @@
     ],
     "workloads":[
         {
-            "name":"launch_donothing",
+            "name":"schedule_noop",
             "workload_script":"workloads/donothing.py",
             "iteration_target":10,
             "time_target":null,
             "execution_time_limit":null
         },
         {
-            "name":"sleep_donothing",
+            "name":"schedule_sleep1s",
             "workload_script":"workloads/sleep1s.py",
             "iteration_target":10,
             "time_target":null,
