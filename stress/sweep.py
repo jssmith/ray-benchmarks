@@ -23,7 +23,8 @@ def run_experiment(experiment_name, workload, system_config, log_directory):
         s.start_ray(shm_size=system_config["shm_size"], mem_size=system_config["mem_size"], num_workers=system_config["num_workers"], num_nodes=system_config["num_nodes"])
         time.sleep(2)
         execution_time_limit = workload["execution_time_limit"] if "execution_time_limit" in workload else None
-        s.iterate_workload(workload["workload_script"], iteration_target=workload["iteration_target"], time_target=workload["time_target"], execution_time_limit=execution_time_limit)
+        sequential_failures_limit = workload["sequential_failures_limit"] if "sequential_failures_limit" in workload else 3
+        s.iterate_workload(workload["workload_script"], iteration_target=workload["iteration_target"], time_target=workload["time_target"], execution_time_limit=execution_time_limit, sequential_failures_limit=sequential_failures_limit)
         s.stop_ray()
 
 

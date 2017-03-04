@@ -18,6 +18,8 @@ class Analysis(object):
             }
             self.experiment_config = None
             self.analysis = eventstats.Analysis()
+            self.fail_ct = 0
+            self.max_success_iteration = 0
 
         def handle_event(self, e):
             event_type = e["type"]
@@ -30,10 +32,16 @@ class Analysis(object):
         def handle_finish_work_event(self, e):
             if e["data"]["success"]:
                 [self.analysis.add_event(ev) for ev in e["data"]["stats"]["events"]]
+                if e["data"]["iteration"] > self.max_success_iteration:
+                    self.max_success_iteration = e["data"]["iteration"]
+            else:
+                self.fail_ct += 1
 
         def get_analysis(self):
             a = {}
-            a["summary_stats"] = self.analysis.summary_stats()
+            a["summary_stats"] = self.analysis.summary_stats() 
+            a["fail_ct"] = self.fail_ct
+            a["max_success_iteration"] = self.max_success_iteration
             a["experiment_config"] = self.experiment_config
             return a
 
@@ -62,6 +70,8 @@ class Analysis(object):
                 measurement = key[keyprefixlen:]
                 for stat in [ "min_elapsed_time", "max_elapsed_time", "avg_elapsed_time", "ct" ]:
                     print name, num_workers, num_nodes, measurement, stat_names[stat], stats[stat]
+            print name, num_workers, num_nodes, "max_success_iteration", "value", s["max_success_iteration"]
+            print name, num_workers, num_nodes, "failure_ct", "value", s["fail_ct"]
 
 
 if __name__ == "__main__":

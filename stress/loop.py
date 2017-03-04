@@ -174,10 +174,17 @@ class StressRay(object):
         (stdoutdata, stderrdata) = proc.communicate()
         stopped_container_id = self._get_container_id(stdoutdata)
         stop_successful = container_id == stopped_container_id
+
+        proc = Popen(["docker", "rm", "-f", container_id], stdout=PIPE)
+        (stdoutdata, stderrdata) = proc.communicate()
+        removed_container_id = self._get_container_id(stdoutdata)
+        remove_successful = container_id == stopped_container_id
+
         self.logger.log("stop_node", {
             "container_id" : container_id,
             "is_head" : container_id == self.head_container_id,
-            "success" : stop_successful
+            "stop_success" : stop_successful,
+            "remove_success": remove_successful
             })
 
     def stop_ray(self):
@@ -185,7 +192,7 @@ class StressRay(object):
         for container_id in self.worker_container_ids:
             self._stop_node(container_id)
 
-    def _do_iteration(self, workload_script, iteration_state, waited_time_limit):
+    def _do_iteration(self, workload_script, iteration_state, waited_time_limit, sequential_failures_limit):
         i = iteration_state.iteration_index
         iteration_state.iteration_index += 1
         def log_start(pid):
@@ -214,14 +221,14 @@ class StressRay(object):
         else:
             iteration_state.num_failures += 1
             iteration_state.sequential_failures += 1
-            if iteration_state.sequential_failures >= 3:
+            if iteration_state.sequential_failures >= sequential_failures_limit:
                 iteration_state.iteration_end_reason = "excessive_failures"
                 continue_iteration = False
             else:
                 continue_iteration = True
         return continue_iteration
 
-    def iterate_workload(self, workload_script, iteration_target=None, time_target=None, execution_time_limit=None):
+    def iterate_workload(self, workload_script, iteration_target=None, time_target=None, execution_time_limit=None, sequential_failures_limit=3):
         class iteration_state: pass
         iteration_state.sequential_failures = 0
         iteration_state.excessive_failures = False
@@ -259,7 +266,7 @@ class StressRay(object):
             "time_target" : time_target
             })
         while loop_predicate():
-            if not self._do_iteration(workload_script, iteration_state, waited_time_limit):
+            if not self._do_iteration(workload_script, iteration_state, waited_time_limit, sequential_failures_limit):
                 break
         iteration_state.iteration_end_time = time.time()
 
@@ -282,6 +289,7 @@ if __name__ == "__main__":
     parser.add_argument("--time-target", type=int, help="time target in seconds")
     parser.add_argument("--iteration-target", type=int, help="iteration target in seconds")
     parser.add_argument("--task-time-limit", type=int, help="task execution time limit")
+    parser.add_argument("--sequential-failures-limit", type=int, help="limit on sequential failures")
     parser.add_argument("--log", help="event log file")
     args = parser.parse_args()
 
@@ -295,6 +303,6 @@ if __name__ == "__main__":
         # sleep a little bit to give Ray time to start
         time.sleep(2)
 
-        s.iterate_workload(args.workload, iteration_target=args.iteration_target, time_target=args.time_target, execution_time_limit=args.task_time_limit)
+        s.iterate_workload(args.workload, iteration_target=args.iteration_target, time_target=args.time_target, execution_time_limit=args.task_time_limit, sequential_failures_limit=args.sequential_failures_limit)
 
         s.stop_ray()

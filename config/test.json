@@ -19,7 +19,8 @@
             "workload_script":"workloads/donothing.py",
             "iteration_target":10,
             "time_target":null,
-            "execution_time_limit":null
+            "execution_time_limit":null,
+            "sequential_failures_limit":null
         }
     ]
 }
