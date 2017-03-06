@@ -66,7 +66,7 @@ def git_pull(dir="."):
 
 def git_get_tracked(dir="."):
     proc = Popen(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], cwd=dir, stdout=PIPE)
-    (stdout, ) = proc.communicate()
+    (stdout, _) = proc.communicate()
     return stdout.strip()
 
 def build_ray_docker(dir):
@@ -114,6 +114,7 @@ if __name__ == "__main__":
     parser.add_argument("--experiment-name", help="descriptive name for this experiment")
     parser.add_argument("--log-directory", default="logs", help="directory for log files")
     parser.add_argument("--continuous", action="store_true", help="run continuously")
+    parser.add_argument("--rebuild", action="store_true", help="force rebuild of Docker images")
     parser.add_argument("--ray-src", default="../ray", help="path to Ray sources, used when running continuously")
     parser.add_argument("--sleep", default=30, help="time to sleep between checks for new code, used when running continuously")
     args = parser.parse_args()
