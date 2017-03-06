@@ -66,21 +66,26 @@ def git_pull(dir="."):
     Popen(["git", "pull"], cwd=dir).wait()
 
 
-def build_docker(dir):
+def build_ray_docker(dir):
+    proc = Popen(["/bin/bash", "build-docker.sh", "--skip-examples"], cwd=dir)
+    proc.wait()
+    return proc.returncode == 0
+
+def build_benchmark_docker(dir):
     proc = Popen(["/bin/bash", "build-docker.sh"], cwd=dir)
     proc.wait()
     return proc.returncode == 0
 
-
 def update_ray(ray_src_dir):
     git_fetch(dir=ray_src_dir)
+    # TODO: which branch are we tracking? Use: git rev-parse --abbrev-ref --symbolic-full-name @{u}
     print "Ray HEAD is at", get_rev(refname="HEAD", dir=ray_src_dir)
     print "Ray origin/master is at", get_rev(refname="origin/master", dir=ray_src_dir)
     (ahead, behind) = get_relationship(refname="HEAD", other_refname="origin/master", dir=ray_src_dir)
     print "Ray HEAD is {} ahead {} behind origin/master".format(ahead, behind)
     if behind > 0:
         git_pull(dir=ray_src_dir)
-        build_docker(dir=ray_src_dir)
+        build_ray_docker(dir=ray_src_dir)
         return True
     else:
         return False
@@ -93,11 +98,9 @@ def update_benchmark(force_rebuild, benchmark_src_dir):
     print "Benchmark HEAD is {} ahead {} behind origin/master".format(ahead, behind)
     if behind > 0:
         git_pull(dir=benchmark_src_dir)
-        build_docker(dir=benchmark_src_dir)
-        return True
-    else:
-        return False
-
+        force_rebuild = True
+    if force_rebuild
+        build_benchmark_docker(dir=benchmark_src_dir)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="matrix.py", description="Ray performance and stress testing matrix")
@@ -105,7 +108,7 @@ if __name__ == "__main__":
     parser.add_argument("--experiment-name", help="descriptive name for this experiment")
     parser.add_argument("--log-directory", default="logs", help="directory for log files")
     parser.add_argument("--continuous", action="store_true", help="run continuously")
-    parser.add_argument("--ray-src", default="../ray" help="path to Ray sources, used when running continuously")
+    parser.add_argument("--ray-src", default="../ray", help="path to Ray sources, used when running continuously")
     parser.add_argument("--sleep", default=30, help="time to sleep between checks for new code, used when running continuously")
     args = parser.parse_args()
 
