@@ -77,7 +77,7 @@ class Analysis(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="analyze.py", description="Analyze logs of Ray performance and stress testing")
     parser.add_argument("logdirectory", help="json configuration file")
-    parser.add_argument("--no-recurse", action='store_true', help="look for log files recursively")
+    parser.add_argument("--no-recurse", action="store_true", help="look for log files recursively")
     args = parser.parse_args()
 
     def findfiles(dir):
