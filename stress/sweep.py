@@ -53,7 +53,7 @@ def get_relationship(refname, other_refname):
 
 
 def get_relationship(refname, other_refname, dir="."):
-    proc = Popen(["git", "rev-list", "--left-right", "--count", refname + "..." + other_refname], stdout=PIPE)
+    proc = Popen(["git", "rev-list", "--left-right", "--count", refname + "..." + other_refname], cwd=dir, stdout=PIPE)
     (stdout, stderr) = proc.communicate()
     (ahead, behind) = map(lambda x: int(x), stdout.strip().split())
     return (ahead, behind)
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     parser.add_argument("--experiment-name", help="descriptive name for this experiment")
     parser.add_argument("--log-directory", default="logs", help="directory for log files")
     parser.add_argument("--continuous", action="store_true", help="run continuously")
-    parser.add_argument("--ray-src", help="path to Ray sources, used when running continuously")
+    parser.add_argument("--ray-src", default="../ray" help="path to Ray sources, used when running continuously")
     parser.add_argument("--sleep", default=30, help="time to sleep between checks for new code, used when running continuously")
     args = parser.parse_args()
 
