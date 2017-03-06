@@ -79,7 +79,7 @@ def build_benchmark_docker(dir):
     proc.wait()
     return proc.returncode == 0
 
-def update_ray(ray_src_dir):
+def update_ray(force_rebuild, ray_src_dir):
     git_fetch(dir=ray_src_dir)
     tracking_ref = git_get_tracked(dir=ray_src_dir)
     print "Ray is tracking {}".format(tracking_ref)
@@ -90,6 +90,7 @@ def update_ray(ray_src_dir):
     print "Ray HEAD is {} ahead {} behind {}".format(ahead, behind, tracking_ref)
     if behind > 0:
         git_pull(dir=ray_src_dir)
+    if behind > 0 or force_rebuild:
         build_ray_docker(dir=ray_src_dir)
         return True
     else:
@@ -129,7 +130,7 @@ if __name__ == "__main__":
 
     if args.continuous:
         while True:
-            ray_updated = update_ray(args.ray_src)
+            ray_updated = update_ray(force_rebuild=args.rebuild, ray_src_dir=args.ray_src)
             update_benchmark(force_rebuild=ray_updated, benchmark_src_dir=".")
             do_sweep(experiment_name, config, args.log_directory)
     else:
