@@ -58,13 +58,16 @@ def get_relationship(refname, other_refname, dir="."):
     (ahead, behind) = map(lambda x: int(x), stdout.strip().split())
     return (ahead, behind)
 
-
 def git_fetch(dir="."):
     Popen(["git", "fetch"], cwd=dir).wait()
 
 def git_pull(dir="."):
     Popen(["git", "pull"], cwd=dir).wait()
 
+def git_get_tracked(dir="."):
+    proc = Popen(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], cwd=dir, stdout=PIPE)
+    (stdout, ) = proc.communicate()
+    return stdout.strip()
 
 def build_ray_docker(dir):
     proc = Popen(["/bin/bash", "build-docker.sh", "--skip-examples"], cwd=dir)
@@ -78,11 +81,13 @@ def build_benchmark_docker(dir):
 
 def update_ray(ray_src_dir):
     git_fetch(dir=ray_src_dir)
+    tracking_ref = git_get_tracked(dir=ray_src_dir)
+    print "Ray is tracking {}".format(tracking_ref)
     # TODO: which branch are we tracking? Use: git rev-parse --abbrev-ref --symbolic-full-name @{u}
     print "Ray HEAD is at", get_rev(refname="HEAD", dir=ray_src_dir)
-    print "Ray origin/master is at", get_rev(refname="origin/master", dir=ray_src_dir)
-    (ahead, behind) = get_relationship(refname="HEAD", other_refname="origin/master", dir=ray_src_dir)
-    print "Ray HEAD is {} ahead {} behind origin/master".format(ahead, behind)
+    print "Ray {} is at {}".format(tracking_ref, get_rev(refname=tracking_ref, dir=ray_src_dir))
+    (ahead, behind) = get_relationship(refname="HEAD", other_refname=tracking_ref, dir=ray_src_dir)
+    print "Ray HEAD is {} ahead {} behind {}".format(ahead, behind, tracking_ref)
     if behind > 0:
         git_pull(dir=ray_src_dir)
         build_ray_docker(dir=ray_src_dir)
@@ -92,14 +97,15 @@ def update_ray(ray_src_dir):
 
 def update_benchmark(force_rebuild, benchmark_src_dir):
     git_fetch(dir=benchmark_src_dir)
+    tracking_ref = git_get_tracked(dir=benchmark_src_dir)
     print "Benchmark HEAD is at", get_rev(refname="HEAD", dir=benchmark_src_dir)
-    print "Benchmark origin/master is at", get_rev(refname="origin/master", dir=benchmark_src_dir)
-    (ahead, behind) = get_relationship(refname="HEAD", other_refname="origin/master", dir=benchmark_src_dir)
-    print "Benchmark HEAD is {} ahead {} behind origin/master".format(ahead, behind)
+    print "Benchmark {} is at {}".format(tracking_ref, get_rev(refname=tracking_ref, dir=benchmark_src_dir))
+    (ahead, behind) = get_relationship(refname="HEAD", other_refname=tracking_ref, dir=benchmark_src_dir)
+    print "Benchmark HEAD is {} ahead {} behind {}".format(ahead, behind, tracking_ref)
     if behind > 0:
         git_pull(dir=benchmark_src_dir)
         force_rebuild = True
-    if force_rebuild
+    if force_rebuild:
         build_benchmark_docker(dir=benchmark_src_dir)
 
 if __name__ == "__main__":
