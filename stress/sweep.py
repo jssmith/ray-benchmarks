@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import sys
 import time
 
 from loop import Logger, StressRay
@@ -41,6 +42,7 @@ def do_sweep(experiment_name, config, base_log_directory):
 
 
 def get_rev(refname="HEAD", dir="."):
+    print("get rev {} {}".format(refname, dir))
     proc = Popen(["git", "rev-parse", refname], cwd=dir, stdout=PIPE)
     (stdout, stderr) = proc.communicate()
     return stdout.strip()
@@ -75,39 +77,48 @@ def build_ray_docker(dir):
     return proc.returncode == 0
 
 def build_benchmark_docker(dir):
-    proc = Popen(["/bin/bash", "build-docker.sh"], cwd=dir)
+
     proc.wait()
     return proc.returncode == 0
 
-def update_ray(force_rebuild, ray_src_dir):
-    git_fetch(dir=ray_src_dir)
-    tracking_ref = git_get_tracked(dir=ray_src_dir)
-    print "Ray is tracking {}".format(tracking_ref)
-    # TODO: which branch are we tracking? Use: git rev-parse --abbrev-ref --symbolic-full-name @{u}
-    print "Ray HEAD is at", get_rev(refname="HEAD", dir=ray_src_dir)
-    print "Ray {} is at {}".format(tracking_ref, get_rev(refname=tracking_ref, dir=ray_src_dir))
-    (ahead, behind) = get_relationship(refname="HEAD", other_refname=tracking_ref, dir=ray_src_dir)
+def update(src_dir, respawn_if_updated=False):
+    initial_git_rev = get_rev(refname="HEAD", dir=src_dir)
+    git_fetch(dir=src_dir)
+    tracking_ref = git_get_tracked(dir=src_dir)
+    if not tracking_ref:
+        print "no upstream found"
+        return initial_git_rev
+    print "{} is tracking {}".format(src_dir, tracking_ref)
+    print "HEAD is at", initial_git_rev
+    print "{} is at {}".format(tracking_ref, get_rev(refname=tracking_ref, dir=src_dir))
+    (ahead, behind) = get_relationship(refname="HEAD", other_refname=tracking_ref, dir=src_dir)
     print "Ray HEAD is {} ahead {} behind {}".format(ahead, behind, tracking_ref)
     if behind > 0:
-        git_pull(dir=ray_src_dir)
-    if behind > 0 or force_rebuild:
-        build_ray_docker(dir=ray_src_dir)
-        return True
+        git_pull(dir=src_dir)
+        if respawn_if_updated:
+            executable = sys.executable
+            os.execl(executable, executable, *sys.args)
+        else:
+            return get_rev(refname="HEAD", dir=src_dir)
     else:
-        return False
+        return initial_git_rev
 
-def update_benchmark(force_rebuild, benchmark_src_dir):
-    git_fetch(dir=benchmark_src_dir)
-    tracking_ref = git_get_tracked(dir=benchmark_src_dir)
-    print "Benchmark HEAD is at", get_rev(refname="HEAD", dir=benchmark_src_dir)
-    print "Benchmark {} is at {}".format(tracking_ref, get_rev(refname=tracking_ref, dir=benchmark_src_dir))
-    (ahead, behind) = get_relationship(refname="HEAD", other_refname=tracking_ref, dir=benchmark_src_dir)
-    print "Benchmark HEAD is {} ahead {} behind {}".format(ahead, behind, tracking_ref)
-    if behind > 0:
-        git_pull(dir=benchmark_src_dir)
-        force_rebuild = True
-    if force_rebuild:
-        build_benchmark_docker(dir=benchmark_src_dir)
+def build_benchmark(ray_git_rev, benchmark_git_rev, benchmark_src_dir):
+    docker_git_revs = StressRay.get_docker_git_revs("ray-project/benchmark", ["/ray/git-rev", "/benchmark/git-rev"])
+    if docker_git_revs != [ray_git_rev, benchmark_git_rev]:
+        if call(["/bin/bash", "build-docker.sh"], cwd=benchmark_src_dir) != 0:
+            raise RuntimeError("error rebuilding benchmark Docker image")
+
+def build_ray(ray_git_rev, ray_src_dir):
+    docker_git_revs = StressRay.get_docker_git_revs("ray-project/deploy", ["/ray/git-rev"])
+    if docker_git_revs != [ray_git_rev]:
+        print("building ray as {} does not match {}".format(docker_git_revs[0], ray_git_rev))
+        sys.exit(1)
+        if call(["/bin/bash", "build-docker.sh", "--skip-examples"], cwd=ray_src_dir) != 0:
+            raise RuntimeError("error rebuilding Ray Docker image")
+
+def script_dir():
+    return os.path.dirname(os.path.realpath(__file__))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="matrix.py", description="Ray performance and stress testing matrix")
@@ -129,9 +140,12 @@ if __name__ == "__main__":
         experiment_name = os.path.splitext(os.path.basename(args.configuration))[0]
 
     if args.continuous:
+        benchmark_src_dir=os.path.dirname(script_dir())
         while True:
-            ray_updated = update_ray(force_rebuild=args.rebuild, ray_src_dir=args.ray_src)
-            update_benchmark(force_rebuild=ray_updated, benchmark_src_dir=".")
+            benchmark_git_rev = update(src_dir=benchmark_src_dir, respawn_if_updated=True)
+            ray_git_rev = update(src_dir=args.ray_src)
+            build_ray(ray_git_rev, args.ray_src)
+            build_benchmark(ray_git_rev, benchmark_git_rev, benchmark_src_dir)
             do_sweep(experiment_name, config, args.log_directory)
     else:
         do_sweep(experiment_name, config, args.log_directory)
