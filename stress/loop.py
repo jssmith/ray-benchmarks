@@ -46,15 +46,6 @@ class StressRay(object):
         self.worker_container_ids = []
         self.head_container_ip = None
 
-    @staticmethod
-    def get_docker_git_revs(docker_image, paths):
-        proc = Popen(["docker", "run", docker_image, "cat"] + paths, stdout=PIPE)
-        (stdout, _) = proc.communicate()
-        git_revs = stdout.strip().split('\n')
-        if len(git_revs) != len(paths):
-            return len(paths) * [""]
-        return git_revs
-
     def _get_container_id(self, stdoutdata):
         p = re.compile("([0-9a-f]{64})\n")
         m = p.match(stdoutdata)
@@ -268,12 +259,9 @@ class StressRay(object):
             else:
                 waited_time_limit = None
 
-        ray_git_rev, benchmark_git_rev = StressRay.get_docker_git_revs("ray-project/benchmark", ["/ray/git-rev", "/benchmark/git-rev"])
         self.logger.log("start_iterations", {
             "workload_script" : workload_script,
             "head_container_id" : self.head_container_id,
-            "ray_git_rev" : ray_git_rev,
-            "benchmark_git_rev" : benchmark_git_rev,
             "iteration_target" : iteration_target,
             "time_target" : time_target
             })

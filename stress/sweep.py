@@ -17,10 +17,15 @@ def run_experiment(experiment_name, workload, system_config, log_directory):
 
     print log_filename
     with Logger(log_filename) as logger:
+        ray_git_rev, benchmark_git_rev = get_docker_git_revs("ray-project/benchmark", ["/ray/git-rev", "/benchmark/git-rev"])
         logger.log("experiment", {
             "experiment_name" : experiment_name,
             "system_config" : system_config,
-            "workload" : workload
+            "workload" : workload,
+            "git-revs" : {
+                "ray" : ray_git_rev,
+                "benchmark" : benchmark_git_rev
+                }
             })
         s = StressRay(logger)
         s.start_ray(shm_size=system_config["shm_size"], mem_size=system_config["mem_size"], num_workers=system_config["num_workers"], num_nodes=system_config["num_nodes"])
@@ -59,6 +64,14 @@ def get_relationship(refname, other_refname, dir="."):
     (stdout, stderr) = proc.communicate()
     (ahead, behind) = map(lambda x: int(x), stdout.strip().split())
     return (ahead, behind)
+
+def get_docker_git_revs(docker_image, paths):
+    proc = Popen(["docker", "run", docker_image, "cat"] + paths, stdout=PIPE)
+    (stdout, _) = proc.communicate()
+    git_revs = stdout.strip().split('\n')
+    if len(git_revs) != len(paths):
+        return len(paths) * [""]
+    return git_revs
 
 def git_fetch(dir="."):
     Popen(["git", "fetch"], cwd=dir).wait()
@@ -104,13 +117,13 @@ def update(src_dir, respawn_if_updated=False):
         return initial_git_rev
 
 def build_benchmark(ray_git_rev, benchmark_git_rev, benchmark_src_dir):
-    docker_git_revs = StressRay.get_docker_git_revs("ray-project/benchmark", ["/ray/git-rev", "/benchmark/git-rev"])
+    docker_git_revs = get_docker_git_revs("ray-project/benchmark", ["/ray/git-rev", "/benchmark/git-rev"])
     if docker_git_revs != [ray_git_rev, benchmark_git_rev]:
         if call(["/bin/bash", "build-docker.sh"], cwd=benchmark_src_dir) != 0:
             raise RuntimeError("error rebuilding benchmark Docker image")
 
 def build_ray(ray_git_rev, ray_src_dir):
-    docker_git_revs = StressRay.get_docker_git_revs("ray-project/deploy", ["/ray/git-rev"])
+    docker_git_revs = get_docker_git_revs("ray-project/deploy", ["/ray/git-rev"])
     if docker_git_revs != [ray_git_rev]:
         print("building ray as {} does not match {}".format(docker_git_revs[0], ray_git_rev))
         if call(["/bin/bash", "build-docker.sh", "--skip-examples"], cwd=ray_src_dir) != 0:
