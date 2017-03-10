@@ -113,7 +113,6 @@ def build_ray(ray_git_rev, ray_src_dir):
     docker_git_revs = StressRay.get_docker_git_revs("ray-project/deploy", ["/ray/git-rev"])
     if docker_git_revs != [ray_git_rev]:
         print("building ray as {} does not match {}".format(docker_git_revs[0], ray_git_rev))
-        sys.exit(1)
         if call(["/bin/bash", "build-docker.sh", "--skip-examples"], cwd=ray_src_dir) != 0:
             raise RuntimeError("error rebuilding Ray Docker image")
 
