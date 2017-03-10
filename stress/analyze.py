@@ -98,7 +98,9 @@ if __name__ == "__main__":
 
     def findfiles(dir):
         all_files = []
-        for name in listdir(dir):
+        listing = listdir(dir)
+        list.sort(listing)
+        for name in listing:
             name_path = join(dir, name)
             if isdir(name_path):
                 if not args.no_recurse:
