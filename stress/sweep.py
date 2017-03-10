@@ -97,7 +97,7 @@ def update(src_dir, respawn_if_updated=False):
         git_pull(dir=src_dir)
         if respawn_if_updated:
             executable = sys.executable
-            os.execl(executable, executable, *sys.args)
+            os.execl(executable, executable, *sys.argv)
         else:
             return get_rev(refname="HEAD", dir=src_dir)
     else:
