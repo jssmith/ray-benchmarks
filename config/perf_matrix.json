@@ -30,7 +30,7 @@
         },
         {
             "name":"worker_blocking",
-            "workload_script":"workloads/blocking.py",
+            "workload_script":"workloads/block.py",
             "iteration_target":null,
             "time_target":3600,
             "execution_time_limit":10
