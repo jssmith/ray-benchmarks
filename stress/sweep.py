@@ -1,4 +1,5 @@
 import argparse
+import boto3
 import json
 import os
 import sys
@@ -132,6 +133,23 @@ def build_ray(ray_git_rev, ray_src_dir):
 def script_dir():
     return os.path.dirname(os.path.realpath(__file__))
 
+def post_analysis_s3(log_directory, s3_bucket):
+    try:
+        analysis_script = os.path.join(script_dir(), "analyze.py")
+        proc = Popen(["python", analysis_script, "--human-readable", "--unique-revs", log_directory], stdout=PIPE, stderr=PIPE)
+        (stdout, stderr) = proc.communicate()
+        if proc.returncode==0:
+            s3 = boto3.resource('s3')
+            s3.Bucket(s3_bucket).put_object(Key="latest.txt", Body=stdout, ContentType='text/plain')
+            print("uploaded analysis to S3")
+        else:
+            print("failed up update analysis")
+            print(stdout)
+            print(stderr)
+    except Exception as e:
+        print("problem posting to S3", str(e))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="matrix.py", description="Ray performance and stress testing matrix")
     parser.add_argument("configuration", metavar="config.json", help="json configuration file")
@@ -140,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument("--continuous", action="store_true", help="run continuously")
     parser.add_argument("--rebuild", action="store_true", help="force rebuild of Docker images")
     parser.add_argument("--ray-src", default="../ray", help="path to Ray sources, used when running continuously")
-    parser.add_argument("--sleep", default=30, help="time to sleep between checks for new code, used when running continuously")
+    parser.add_argument("--post-analysis-s3", help="upload analysis to s3 bucket")
     args = parser.parse_args()
 
     with open(args.configuration) as f:
@@ -159,6 +177,8 @@ if __name__ == "__main__":
             build_ray(ray_git_rev, args.ray_src)
             build_benchmark(ray_git_rev, benchmark_git_rev, benchmark_src_dir)
             do_sweep(experiment_name, config, args.log_directory)
+            if args.post_analysis_s3:
+                post_analysis_s3(args.log_directory, args.post_analysis_s3)
     else:
         do_sweep(experiment_name, config, args.log_directory)
 
