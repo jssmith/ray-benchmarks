@@ -8,7 +8,7 @@ import sys
 
 from itertools import groupby
 from os import listdir
-from os.path import join, isdir, basename
+from os.path import join, isdir, basename, dirname, realpath
 
 from tabulate import tabulate
 
@@ -107,7 +107,7 @@ class Analysis(object):
         def dateformat(timestamp):
             return datetime.datetime.fromtimestamp(timestamp).strftime('%Y%m%d %H:%M:%S')
 
-        with open("config/analyze.json") as f:
+        with open(join(dirname(dirname(realpath(__file__))),"config/analyze.json")) as f:
             analysis_json = json.load(f)
             analysis_info = {}
             for w in analysis_json["workloads"]:
