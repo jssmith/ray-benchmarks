@@ -1,0 +1,38 @@
+{
+    "workloads":[
+        {
+            "name":"schedule_noop",
+            "description":"submit 100*num_workers noop tasks",
+            "cols":{
+                "submit_avg_elapsed_time":"submit avg",
+                "submit_max_elapsed_time":"submit max",
+                "submit_ct":"ct",
+                "total_avg_elapsed_time":"total avg",
+                "total_max_elapsed_time":"total max",
+                "failures_ct":"failures"
+            }
+        },
+        {
+            "name":"schedule_sleep1s",
+            "description":"submit 100*num_workers 1s sleep tasks",
+            "cols":{
+                "submit_avg_elapsed_time":"submit avg",
+                "submit_max_elapsed_time":"submit max",
+                "submit_ct":"ct",
+                "total_avg_elapsed_time":"total avg",
+                "total_max_elapsed_time":"total max",
+                "failures_ct":"failures"
+            }
+        },
+        {
+            "name":"worker_blocking",
+            "description":"spawn increasing number of tasks to test spawning more workers",
+            "cols":{
+                "submit_max_elapsed_time":"max elapsed time",
+                "submit_ct":"ct",
+                "success_iteration_max":"max successful iteration",
+                "failures_ct":"failures"
+            }
+        }
+    ]
+}

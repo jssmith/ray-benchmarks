@@ -6,8 +6,11 @@ import raybench.eventstats as eventstats
 import json
 import sys
 
+from itertools import groupby
 from os import listdir
 from os.path import join, isdir, basename
+
+from tabulate import tabulate
 
 
 class Analysis(object):
@@ -67,7 +70,7 @@ class Analysis(object):
             except(RuntimeError):
                 print("skipping file {}".format(filename), file=sys.stderr)
 
-    def summarize(self):
+    def summary_table(self):
         stat_names = { "min_elapsed_time" : "min",
             "max_elapsed_time" : "max",
             "avg_elapsed_time" : "avg",
@@ -93,49 +96,100 @@ class Analysis(object):
             print(ray_git_rev, benchmark_git_rev, name, num_workers, num_nodes, "failures", "ct", s["fail_ct"])
 
     def workload_trend(self):
-        rows = []
-        names = None
-        std_names = ["timestamp", "ray_git_rev", "benchmark_git_rev", "workload", "num_workers", "num_nodes"]
-        for s in self.all_stats:
+
+        def stat_basic_info(s):
             system_config = s["experiment_config"]["system_config"]
             num_workers = system_config["num_workers"]
             num_nodes = system_config["num_nodes"]
             name = s["experiment_config"]["workload"]["name"]
-            timestamp = s["timestamp"]
-            if "git-revs" in s["experiment_config"]:
-                ray_git_rev = s["experiment_config"]["git-revs"]["ray"][:7]
-                benchmark_git_rev = s["experiment_config"]["git-revs"]["benchmark"][:7]
-            else:
-                ray_git_rev = None
-                benchmark_git_rev = None
-            keyprefixlen = len("None:None:")
-            row = [timestamp, ray_git_rev, benchmark_git_rev, name, num_workers, num_nodes]
-            row_names = []
-            for key, stats in s["summary_stats"].items():
-                measurement = key[keyprefixlen:]
-                for stat in [ "min_elapsed_time", "max_elapsed_time", "avg_elapsed_time", "ct" ]:
-                    row.append(stats[stat])
-                    row_names.append("{}_{}".format(measurement, stat))
-            if not names:
-                names = row_names
-            elif row_names != names:
-                raise RuntimeError("inconsistent column names")
-            rows.append(row)
+            return name, num_workers, num_nodes
 
         def dateformat(timestamp):
             return datetime.datetime.fromtimestamp(timestamp).strftime('%Y%m%d %H:%M:%S')
-        list.sort(rows)
-        print(*(std_names + names))
-        [print(dateformat(row[0]), *(row[1:])) for row in rows]
+
+        with open("config/analyze.json") as f:
+            analysis_json = json.load(f)
+            analysis_info = {}
+            for w in analysis_json["workloads"]:
+                analysis_info[w["name"]] = w
+
+        stat_groups = {k : list(v) for k, v in groupby(sorted(self.all_stats, key=stat_basic_info), key=stat_basic_info)}
+
+        for k in sorted(stat_groups.keys()):
+            name, num_workers, num_nodes = k
+            filter_col = lambda x: x
+            if name in analysis_info:
+                description = analysis_info[name]["description"]
+                if "cols" in analysis_info[name]:
+                    cols = analysis_info[name]["cols"]
+                    filter_col = lambda x,cols=cols: cols[x] if x in cols else None
+            else:
+                description = "Unknown description"
+
+            g = stat_groups[k]
+            print("\n==================================================================================================================\n")
+            print("workload:", name)
+            print("num workers:", num_workers)
+            print("num nodes:", num_nodes)
+            print(description)
+            print()
+
+            names = []
+            rows = []
+
+            def add_col(name, stat):
+                include_col = filter_col(name)
+                if include_col:
+                    row.append(stat)
+                    row_names.append(include_col)
+
+            std_names = ["timestamp", "ray rev", "bm rev", "workload", "workers", "nodes"]
+            for s in g:
+                timestamp = s["timestamp"]
+                if "git-revs" in s["experiment_config"]:
+                    ray_git_rev = s["experiment_config"]["git-revs"]["ray"][:7]
+                    benchmark_git_rev = s["experiment_config"]["git-revs"]["benchmark"][:7]
+                else:
+                    ray_git_rev = None
+                    benchmark_git_rev = None
+                keyprefixlen = len("None:None:")
+                row = [dateformat(timestamp), ray_git_rev, benchmark_git_rev, name, num_workers, num_nodes]
+                row_names = []
+                for key, stats in s["summary_stats"].items():
+                    measurement = key[keyprefixlen:]
+                    for stat in [ "min_elapsed_time", "max_elapsed_time", "avg_elapsed_time", "ct" ]:
+                        stat_name = "{}_{}".format(measurement, stat)
+                        add_col(stat_name, stats[stat])
+
+                if row_names:
+                    add_col("success_iteration_max", s["max_success_iteration"])
+                    add_col("failures_ct", s["fail_ct"])
+
+                    if not names:
+                        names = row_names
+                    elif row_names != names:
+                        print("{} is not {}".format(row_names, names))
+                        raise RuntimeError("inconsistent column names")
+                    rows.append(row)
+
+            list.sort(rows)
+            print(tabulate(rows, headers=(std_names + names), floatfmt=".3f"))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="analyze.py", description="Analyze logs of Ray performance and stress testing")
     parser.add_argument("logdirectory", help="json configuration file")
     parser.add_argument("--no-recurse", action="store_true", help="look for log files recursively")
-    parser.add_argument("--filter-workload", help="show only one workload")
+    parser.add_argument("--human-readable", action="store_true", help="output for human reader")
+    parser.add_argument("--filter", help="filter on log file names (select workload)")
     args = parser.parse_args()
 
-    def findfiles(dir, filter=lambda _:True):
+    if args.filter:
+        filter = lambda fn: basename(fn).startswith(args.filter)
+    else:
+        filter=lambda _:True
+
+    def findfiles(dir):
         all_files = []
         listing = listdir(dir)
         list.sort(listing)
@@ -143,20 +197,16 @@ if __name__ == "__main__":
             name_path = join(dir, name)
             if isdir(name_path):
                 if not args.no_recurse:
-                    all_files += findfiles(name_path, filter)
+                    all_files += findfiles(name_path)
             else:
                 if filter(name_path):
                     all_files.append(name_path)
         return all_files
 
     a = Analysis()
-    if not args.filter_workload:
-        for f in findfiles(args.logdirectory):
-            a.add_file(f)
-        a.summarize()
-    else:
-        def check_file(fn):
-            return basename(fn).startswith(args.filter_workload)
-        for f in findfiles(args.logdirectory, check_file):
-            a.add_file(f)
+    for f in findfiles(args.logdirectory):
+        a.add_file(f)
+    if args.human_readable:
         a.workload_trend()
+    else:
+        a.summary_table()
