@@ -6,6 +6,7 @@ import raybench.eventstats as eventstats
 import json
 import sys
 
+from collections import defaultdict
 from itertools import groupby
 from os import listdir
 from os.path import join, isdir, basename, dirname, realpath
@@ -16,6 +17,7 @@ from tabulate import tabulate
 class Analysis(object):
     def __init__(self):
         self.all_stats = []
+        self.seen_git_revs = defaultdict(lambda: set())
 
     class FileProcessor(object):
         def __init__(self):
@@ -28,6 +30,7 @@ class Analysis(object):
             self.analysis = eventstats.Analysis()
             self.fail_ct = 0
             self.max_success_iteration = 0
+            self.after_experiment = lambda: None
 
         def handle_event(self, e):
             event_type = e["type"]
@@ -40,6 +43,7 @@ class Analysis(object):
             else:
                 self.experiment_config = e["data"]
                 self.timestamp = e["timestamp"]
+                self.after_experiment()
 
         def handle_finish_work_event(self, e):
             if e["data"]["success"]:
@@ -60,12 +64,41 @@ class Analysis(object):
             a["timestamp"] = self.timestamp
             return a
 
-    def add_file(self, filename):
+    def update_revs(self, experiment_config):
+        if "git-revs" in experiment_config:
+            ray_git_rev = experiment_config["git-revs"]["ray"]
+            benchmark_git_rev = experiment_config["git-revs"]["benchmark"]
+        else:
+            ray_git_rev = None
+            benchmark_git_rev = None
+        combined_rev = (ray_git_rev, benchmark_git_rev)
+        seen_revs = self.seen_git_revs[self.stat_basic_info(experiment_config)]
+        if combined_rev in seen_revs:
+            return False
+        else:
+            seen_revs.add(combined_rev)
+            return True
+
+    def stat_basic_info(self, experiment_config):
+        system_config = experiment_config["system_config"]
+        num_workers = system_config["num_workers"]
+        num_nodes = system_config["num_nodes"]
+        name = experiment_config["workload"]["name"]
+        return name, num_workers, num_nodes
+
+    def add_file(self, filename, unique_revs=False):
         with open(filename, "r") as f:
             try:
                 fp = Analysis.FileProcessor()
+                skip = [False]
+                if unique_revs:
+                    def after_experiment_callback():
+                        skip[0] = True if not self.update_revs(fp.experiment_config) else False
+                    fp.after_experiment = after_experiment_callback
                 for line in f:
                     fp.handle_event(json.loads(line))
+                    if skip[0]:
+                        return
                 self.all_stats.append(fp.get_analysis())
             except(RuntimeError):
                 print("skipping file {}".format(filename), file=sys.stderr)
@@ -97,13 +130,6 @@ class Analysis(object):
 
     def workload_trend(self):
 
-        def stat_basic_info(s):
-            system_config = s["experiment_config"]["system_config"]
-            num_workers = system_config["num_workers"]
-            num_nodes = system_config["num_nodes"]
-            name = s["experiment_config"]["workload"]["name"]
-            return name, num_workers, num_nodes
-
         def dateformat(timestamp):
             return datetime.datetime.fromtimestamp(timestamp).strftime('%Y%m%d %H:%M:%S')
 
@@ -113,7 +139,10 @@ class Analysis(object):
             for w in analysis_json["workloads"]:
                 analysis_info[w["name"]] = w
 
-        stat_groups = {k : list(v) for k, v in groupby(sorted(self.all_stats, key=stat_basic_info), key=stat_basic_info)}
+        def keyfn(s):
+            return self.stat_basic_info(s["experiment_config"])
+
+        stat_groups = {k : list(v) for k, v in groupby(sorted(self.all_stats, key=keyfn), key=keyfn)}
 
         for k in sorted(stat_groups.keys()):
             name, num_workers, num_nodes = k
@@ -181,6 +210,7 @@ if __name__ == "__main__":
     parser.add_argument("logdirectory", help="json configuration file")
     parser.add_argument("--no-recurse", action="store_true", help="look for log files recursively")
     parser.add_argument("--human-readable", action="store_true", help="output for human reader")
+    parser.add_argument("--unique-revs", action="store_true", help="output one result per revision")
     parser.add_argument("--filter", help="filter on log file names (select workload)")
     args = parser.parse_args()
 
@@ -205,7 +235,7 @@ if __name__ == "__main__":
 
     a = Analysis()
     for f in findfiles(args.logdirectory):
-        a.add_file(f)
+        a.add_file(f, args.unique_revs)
     if args.human_readable:
         a.workload_trend()
     else:
