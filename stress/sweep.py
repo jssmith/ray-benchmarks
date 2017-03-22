@@ -182,4 +182,4 @@ if __name__ == "__main__":
     else:
         do_sweep(experiment_name, config, args.log_directory)
 
-    print("Completed with output to {}".format(log_directory))
+    print("Completed with output to {}".format(args.log_directory))
