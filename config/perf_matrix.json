@@ -34,6 +34,54 @@
             "iteration_target":null,
             "time_target":3600,
             "execution_time_limit":10
+        },
+                {
+            "name":"putlargeobject_array_of_pairs",
+            "workload_script":"workloads/putlargeobject/array_of_pairs.py",
+            "iteration_target":10,
+            "time_target":null,
+            "execution_time_limit":10,
+            "sequential_failures_limit":1
+        },
+        {
+            "name":"putlargeobject_np_ones",
+            "workload_script":"workloads/putlargeobject/np_ones.py",
+            "iteration_target":10,
+            "time_target":null,
+            "execution_time_limit":10,
+            "sequential_failures_limit":1
+        },
+        {
+            "name":"putlargeobject_nstring",
+            "workload_script":"workloads/putlargeobject/nstring.py",
+            "iteration_target":10,
+            "time_target":null,
+            "execution_time_limit":10,
+            "sequential_failures_limit":1
+        },
+        {
+            "name":"putlargeobject_ntuple",
+            "workload_script":"workloads/putlargeobject/ntuple.py",
+            "iteration_target":10,
+            "time_target":null,
+            "execution_time_limit":10,
+            "sequential_failures_limit":1
+        },
+        {
+            "name":"putlargeobject_ones_array",
+            "workload_script":"workloads/putlargeobject/ones_array.py",
+            "iteration_target":10,
+            "time_target":null,
+            "execution_time_limit":10,
+            "sequential_failures_limit":1
+        },
+        {
+            "name":"putlargeobject_randints",
+            "workload_script":"workloads/putlargeobject/randints.py",
+            "iteration_target":10,
+            "time_target":null,
+            "execution_time_limit":10,
+            "sequential_failures_limit":1
         }
     ]
 }
