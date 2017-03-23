@@ -208,7 +208,7 @@ class Analysis(object):
             if name in self.analysis_config and "key_metrics" in self.analysis_config[name]:
                 description = self.analysis_config[name]["description"]
                 key_metrics = self.analysis_config[name]["key_metrics"]
-                # print(description)
+                print(description)
                 # print(key_metrics)
 
                 std_colnames = ["timestamp", "ray rev", "bm rev", "workload", "workers", "nodes"]
@@ -266,7 +266,7 @@ class Analysis(object):
 
                 rows, colnames = tb.get_table()
                 list.sort(rows)
-                print("here are the metrics")
+                # print("here are the metrics")
                 print(tabulate(rows, headers=colnames, floatfmt=".3f"))
 
             else:

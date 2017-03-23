@@ -65,7 +65,7 @@
         },
         {
             "name":"putlargeobject_nstring",
-            "description":"String objects.",
+            "description":"Put Python string objects.",
             "key_metrics":[
                 {
                     "name": "Blended rate (DRAFT - need to calibrate)",
@@ -79,7 +79,7 @@
         },
         {
             "name":"putlargeobject_ones_array",
-            "description":"Python array of ones.",
+            "description":"Put Python array of ones.",
             "key_metrics":[
                 {
                     "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
@@ -93,7 +93,7 @@
         },
         {
             "name":"putlargeobject_np_ones",
-            "description":"Numpy array of ones.",
+            "description":"Put Numpy array of ones.",
             "key_metrics":[
                 {
                     "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
@@ -107,7 +107,7 @@
         },
         {
             "name":"putlargeobject_randints",
-            "description":"Numpy array of random numbers.",
+            "description":"Put Numpy array of random numbers.",
             "key_metrics":[
                 {
                     "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
@@ -121,7 +121,7 @@
         },
         {
             "name":"putlargeobject_array_of_pairs",
-            "description":"Numpy array of random numbers.",
+            "description":"Put array of Python tuples.",
             "key_metrics":[
                 {
                     "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
