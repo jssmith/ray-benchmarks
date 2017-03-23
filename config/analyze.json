@@ -3,6 +3,16 @@
         {
             "name":"schedule_noop",
             "description":"submit 100*num_workers noop tasks",
+            "key_metrics":[
+                {
+                    "name": "submit rate (1/s)",
+                    "expression":{
+                        "expression_type": "frac_values",
+                        "numer": "num_tasks",
+                        "denom": "submit_avg_elapsed_time"
+                    }
+                }
+            ],
             "cols":{
                 "submit_avg_elapsed_time":"submit avg",
                 "submit_max_elapsed_time":"submit max",
@@ -15,6 +25,16 @@
         {
             "name":"schedule_sleep1s",
             "description":"submit 100*num_workers 1s sleep tasks",
+            "key_metrics":[
+                {
+                    "name": "submit rate (1/s)",
+                    "expression":{
+                        "expression_type": "frac_values",
+                        "numer": "num_tasks",
+                        "denom": "submit_avg_elapsed_time"
+                    }
+                }
+            ],
             "cols":{
                 "submit_avg_elapsed_time":"submit avg",
                 "submit_max_elapsed_time":"submit max",
@@ -26,13 +46,93 @@
         },
         {
             "name":"worker_blocking",
-            "description":"spawn increasing number of tasks to test spawning more workers",
+            "description":"spawn increasing number of tasks to test spawning more workers.",
+            "key_metrics":[
+                {
+                    "name": "Maximum nested tasks within 10s",
+                    "expression":{
+                        "expression_type": "value",
+                        "value": "num_tasks"
+                    }
+                }
+            ],
             "cols":{
                 "submit_max_elapsed_time":"max elapsed time",
                 "submit_ct":"ct",
-                "success_iteration_max":"max successful iteration",
+                "success_iteration_max":"max success iteration",
                 "failures_ct":"failures"
             }
+        },
+        {
+            "name":"putlargeobject_nstring",
+            "description":"String objects.",
+            "key_metrics":[
+                {
+                    "name": "Blended rate (DRAFT - need to calibrate)",
+                    "expression":{
+                        "expression_type": "frac_values",
+                        "numer": "scale",
+                        "denom": "nstring_max_elapsed_time"
+                    }
+                }
+            ]
+        },
+        {
+            "name":"putlargeobject_ones_array",
+            "description":"Python array of ones.",
+            "key_metrics":[
+                {
+                    "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
+                    "expression":{
+                        "expression_type": "frac_values",
+                        "numer": "scale",
+                        "denom": "ones_array_max_elapsed_time"
+                    }
+                }
+            ]
+        },
+        {
+            "name":"putlargeobject_np_ones",
+            "description":"Numpy array of ones.",
+            "key_metrics":[
+                {
+                    "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
+                    "expression":{
+                        "expression_type": "frac_values",
+                        "numer": "scale",
+                        "denom": "np.ones_max_elapsed_time"
+                    }
+                }
+            ]
+        },
+        {
+            "name":"putlargeobject_randints",
+            "description":"Numpy array of random numbers.",
+            "key_metrics":[
+                {
+                    "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
+                    "expression":{
+                        "expression_type": "frac_values",
+                        "numer": "scale",
+                        "denom": "randints_max_elapsed_time"
+                    }
+                }
+            ]
+        },
+        {
+            "name":"putlargeobject_array_of_pairs",
+            "description":"Numpy array of random numbers.",
+            "key_metrics":[
+                {
+                    "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
+                    "expression":{
+                        "expression_type": "frac_values",
+                        "numer": "scale",
+                        "denom": "array_of_pairs_max_elapsed_time"
+                    }
+                }
+            ]
         }
+
     ]
 }
