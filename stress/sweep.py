@@ -67,7 +67,7 @@ def get_relationship(refname, other_refname, dir="."):
     return (ahead, behind)
 
 def get_docker_git_revs(docker_image, paths):
-    proc = Popen(["docker", "run", docker_image, "cat"] + paths, stdout=PIPE)
+    proc = Popen(["docker", "run", "--rm", docker_image, "cat"] + paths, stdout=PIPE)
     (stdout, _) = proc.communicate()
     git_revs = stdout.strip().split('\n')
     if len(git_revs) != len(paths):
