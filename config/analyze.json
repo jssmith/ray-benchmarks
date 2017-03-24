@@ -5,7 +5,7 @@
             "description":"submit 100*num_workers noop tasks",
             "key_metrics":[
                 {
-                    "name": "submit rate (1/s)",
+                    "name": "task submit rate (1/s)",
                     "expression":{
                         "expression_type": "frac_values",
                         "numer": "num_tasks",
@@ -27,7 +27,7 @@
             "description":"submit 100*num_workers 1s sleep tasks",
             "key_metrics":[
                 {
-                    "name": "submit rate (1/s)",
+                    "name": "task submit rate (1/s)",
                     "expression":{
                         "expression_type": "frac_values",
                         "numer": "num_tasks",
@@ -68,7 +68,7 @@
             "description":"Put Python string objects.",
             "key_metrics":[
                 {
-                    "name": "Blended rate (DRAFT - need to calibrate)",
+                    "name": "Rate (characters/sec) (DRAFT - need to calibrate)",
                     "expression":{
                         "expression_type": "frac_values",
                         "numer": "scale",
@@ -82,7 +82,7 @@
             "description":"Put Python array of ones.",
             "key_metrics":[
                 {
-                    "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
+                    "name": "Rate (array entries/sec) (DRAFT - need to calibrate)",
                     "expression":{
                         "expression_type": "frac_values",
                         "numer": "scale",
@@ -96,7 +96,7 @@
             "description":"Put Numpy array of ones.",
             "key_metrics":[
                 {
-                    "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
+                    "name": "Rate (array entries/sec) (DRAFT - need to calibrate)",
                     "expression":{
                         "expression_type": "frac_values",
                         "numer": "scale",
@@ -110,7 +110,7 @@
             "description":"Put Numpy array of random numbers.",
             "key_metrics":[
                 {
-                    "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
+                    "name": "Rate (array entries/sec) (DRAFT - need to calibrate)",
                     "expression":{
                         "expression_type": "frac_values",
                         "numer": "scale",
@@ -124,7 +124,7 @@
             "description":"Put array of Python tuples.",
             "key_metrics":[
                 {
-                    "name": "Rate (bytes/sec) (DRAFT - need to calibrate)",
+                    "name": "Rate (tuples/sec) (DRAFT - need to calibrate)",
                     "expression":{
                         "expression_type": "frac_values",
                         "numer": "scale",
@@ -133,6 +133,5 @@
                 }
             ]
         }
-
     ]
 }
