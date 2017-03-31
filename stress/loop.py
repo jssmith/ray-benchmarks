@@ -67,7 +67,7 @@ class StressRay(object):
     def _start_head_node(self, mem_size, shm_size, num_workers):
         mem_arg = ["--memory=" + mem_size] if mem_size else []
         shm_arg = ["--shm-size=" + shm_size] if shm_size else []
-        proc = Popen(["docker", "run", "--rm", "-d"] + mem_arg + shm_arg + ["ray-project/benchmark", "/ray/scripts/start_ray.sh", "--head", "--redis-port=6379", "--num-workers={:d}".format(num_workers)], stdout=PIPE)
+        proc = Popen(["docker", "run", "-d"] + mem_arg + shm_arg + ["ray-project/benchmark", "/ray/scripts/start_ray.sh", "--head", "--redis-port=6379", "--num-workers={:d}".format(num_workers)], stdout=PIPE)
         (stdoutdata, stderrdata) = proc.communicate()
         container_id = self._get_container_id(stdoutdata)
         self.logger.log("start_node", {
@@ -85,7 +85,7 @@ class StressRay(object):
     def _start_worker_node(self, mem_size, shm_size, num_workers):
         mem_arg = ["--memory=" + mem_size] if mem_size else []
         shm_arg = ["--shm-size=" + shm_size] if shm_size else []
-        proc = Popen(["docker", "run", "--rm", "-d"] + mem_arg + shm_arg + ["--shm-size=" + shm_size, "ray-project/benchmark", "/ray/scripts/start_ray.sh", "--redis-address={:s}:6379".format(self.head_container_ip), "--num-workers={:d}".format(num_workers)], stdout=PIPE)
+        proc = Popen(["docker", "run", "-d"] + mem_arg + shm_arg + ["--shm-size=" + shm_size, "ray-project/benchmark", "/ray/scripts/start_ray.sh", "--redis-address={:s}:6379".format(self.head_container_ip), "--num-workers={:d}".format(num_workers)], stdout=PIPE)
         (stdoutdata, stderrdata) = proc.communicate()
         container_id = self._get_container_id(stdoutdata)
         if not container_id:
